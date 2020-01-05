@@ -36,10 +36,7 @@ class Domain
             throw new \Exception(sprintf('Domain "%s" is not valid.', $domain));
         }
 
-        if ($this->getLastCharacter() === '.') {
-            throw new \Exception(sprintf('Domain "%s" contains dot on end.', $domain));
-        }
-
+        $this->removeDotOnEnd();
         $this->toLowerCase();
     }
 
@@ -116,9 +113,13 @@ class Domain
         return $this->idn;
     }
 
-    private function getLastCharacter(): string
+    private function removeDotOnEnd(): void
     {
-        return mb_substr($this->idn, -1);
+        $lastCharacter = mb_substr($this->idn, -1);
+        if ($lastCharacter === '.') {
+            $this->idn = mb_substr($this->idn, 0, -1);
+            $this->punycode = mb_substr($this->punycode, 0, -1);
+        }
     }
 
     private function toLowerCase(): void

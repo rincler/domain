@@ -94,7 +94,8 @@ class DomainTest extends TestCase
         return [
             ['', false],
             ['com', true],
-            ['com.', false],
+            ['com.', true],
+            ['com..', false],
             ['.', false],
             ['ab--c', false],
             ['аб--в', false],
@@ -230,7 +231,6 @@ class DomainTest extends TestCase
             ['.'],
             ['ab--c'],
             ['аб--в'],
-            ['com.'],
             ['com..'],
             // maximum length of domain label in punycode - 63 (64 in test)
             ['aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbcc64'],
