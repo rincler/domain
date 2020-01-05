@@ -3,7 +3,11 @@ Domain name value object
 
 ## Usage
 
-    $domain = new \Rincler\Domain('sub.domain.com');
+    <?php
+    
+    use \Rincler\Domain\Domain;
+    
+    $domain = new Domain('sub.domain.com');
     echo $domain; // sub.domain.com
     echo $domain->getIdn(); // sub.domain.com
     echo $domain->getPunycode(); // sub.domain.com
@@ -13,11 +17,11 @@ Domain name value object
     echo $domain->getWithoutTld(); // sub.domain
     echo $domain->getLevel(); // 3
     
-    $domain = new \Rincler\Domain('домен.рф');
+    $domain = new Domain('домен.рф');
     echo $domain->getIdn(); // домен.рф
     echo $domain->getPunycode(); // xn--d1acufc.xn--p1ai
     
-    $domain = new \Rincler\Domain('xn--d1acufc.xn--p1ai');
+    $domain = new Domain('xn--d1acufc.xn--p1ai');
     echo $domain->getIdn(); // домен.рф
     echo $domain->getPunycode(); // xn--d1acufc.xnn
     
@@ -32,9 +36,9 @@ Domain name value object
 - `getIdn` - Returns domain as IDN string (`string`)
 - `getPunycode` - Returns domain as Punycode string (`string`)
 - `getLevel` - Returns domain levels count (`int`)
-- `getZone` - Returns zone of domain (`\Rincler\Domain`)
-- `getWithoutZone` - Returns domain without zone (`\Rincler\Domain`)
-- `getTld` - Returns top-level domain (`\Rincler\Domain`)
-- `getWithoutTld` - Returns domain without top-level domain (`\Rincler\Domain`)
+- `getZone` - Returns zone of domain (`\Rincler\Domain\Domain`)
+- `getWithoutZone` - Returns domain without zone (`\Rincler\Domain\Domain`)
+- `getTld` - Returns top-level domain (`\Rincler\Domain\Domain`)
+- `getWithoutTld` - Returns domain without top-level domain (`\Rincler\Domain\Domain`)
 - `equals` - Returns `true` if current domain equals checked domain, returns `false` otherwise (`bool`)
 - `__toString` - Analog for `getIdn`

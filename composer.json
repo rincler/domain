@@ -5,7 +5,7 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Rincler\\": "src/"
+            "Rincler\\Domain\\": "src/"
         }
     },
     "autoload-dev": {

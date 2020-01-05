@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Rincler;
+namespace Rincler\Domain;
 
 class Domain
 {

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Rincler\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Rincler\Domain;
+use Rincler\Domain\Domain;
 
 class DomainTest extends TestCase
 {
