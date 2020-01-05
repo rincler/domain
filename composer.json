@@ -5,7 +5,7 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Rincler\\": "src/"
+            "Rincler\\Domain\\": "src/"
         }
     },
     "autoload-dev": {
@@ -19,6 +19,11 @@
         "ext-mbstring" : "*"
     },
     "require-dev": {
-        "phpunit/phpunit": "^8.5"
+        "phpunit/phpunit": "^8.5",
+        "friendsofphp/php-cs-fixer": "^2.16"
+    },
+    "scripts": {
+        "test": "phpunit",
+        "check-code-style": "php-cs-fixer fix --dry-run --verbose"
     }
 }

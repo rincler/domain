@@ -1,0 +1,16 @@
+language: php
+
+php:
+  - '7.3'
+  - '7.4'
+
+install:
+  - composer install
+
+script:
+  - composer run check-code-style
+  - composer run test
+
+cache:
+  directories:
+    - $HOME/.composer/cache
