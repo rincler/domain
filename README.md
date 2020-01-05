@@ -1,6 +1,6 @@
 # Domain
 
-![Packagist Version](https://img.shields.io/packagist/v/rincler/domain)
+[![Packagist Version](https://img.shields.io/packagist/v/rincler/domain)](https://packagist.org/packages/rincler/domain)
 [![Build Status](https://travis-ci.com/rincler/domain.svg?branch=master)](https://travis-ci.com/rincler/domain)
 ![PHP from Packagist (specify version)](https://img.shields.io/packagist/php-v/rincler/domain/1.0.0)
 
