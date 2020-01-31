@@ -22,18 +22,23 @@ class Domain
             new Domain($domain);
 
             return true;
-        } catch (\Exception $e) {
+        } catch (InvalidDomainException $e) {
             return false;
         }
     }
 
     public function __construct(string $domain)
     {
-        $this->idn = \idn_to_utf8($domain, 0, INTL_IDNA_VARIANT_UTS46);
-        $this->punycode = \idn_to_ascii($domain, 0, INTL_IDNA_VARIANT_UTS46);
+        $this->idn = \idn_to_utf8($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
 
-        if ($this->idn === false || $this->punycode === false) {
-            throw new \Exception(sprintf('Domain "%s" is not valid.', $domain));
+        if ($this->idn === false) {
+            throw new InvalidDomainException($idnInfo['errors'], sprintf('Domain "%s" is not valid. Idn error bitset: %d', $domain, $idnInfo['errors']));
+        }
+
+        $this->punycode = \idn_to_ascii($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
+
+        if ($this->punycode === false) {
+            throw new InvalidDomainException($idnInfo['errors'], sprintf('Domain "%s" is not valid. Idn error bitset: %d', $domain, $idnInfo['errors']));
         }
 
         $this->removeDotOnEnd();

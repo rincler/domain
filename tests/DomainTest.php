@@ -6,6 +6,7 @@ namespace Rincler\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Rincler\Domain\Domain;
+use Rincler\Domain\InvalidDomainException;
 
 class DomainTest extends TestCase
 {
@@ -219,7 +220,7 @@ class DomainTest extends TestCase
      */
     public function testInvalidDomain(string $domain)
     {
-        $this->expectException(\Exception::class);
+        $this->expectException(InvalidDomainException::class);
         new Domain($domain);
     }
 
