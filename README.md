@@ -15,8 +15,8 @@ use \Rincler\Domain\Domain;
 
 $domain = new Domain('sub.domain.com');
 echo $domain; // sub.domain.com
-echo $domain->getIdn(); // sub.domain.com
-echo $domain->getPunycode(); // sub.domain.com
+echo $domain->asIdn(); // sub.domain.com
+echo $domain->asPunycode(); // sub.domain.com
 echo $domain->getZone(); // domain.com
 echo $domain->getWithoutZone(); // sub
 echo $domain->getTld(); // com
@@ -24,12 +24,12 @@ echo $domain->getWithoutTld(); // sub.domain
 echo $domain->getLevel(); // 3
 
 $domain = new Domain('домен.рф');
-echo $domain->getIdn(); // домен.рф
-echo $domain->getPunycode(); // xn--d1acufc.xn--p1ai
+echo $domain->asIdn(); // домен.рф
+echo $domain->asPunycode(); // xn--d1acufc.xn--p1ai
 
 $domain = new Domain('xn--d1acufc.xn--p1ai');
-echo $domain->getIdn(); // домен.рф
-echo $domain->getPunycode(); // xn--d1acufc.xnn
+echo $domain->asIdn(); // домен.рф
+echo $domain->asPunycode(); // xn--d1acufc.xnn
 ```
     
 ## Installation

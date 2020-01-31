@@ -40,12 +40,12 @@ class Domain
         $this->toLowerCase();
     }
 
-    public function getIdn(): string
+    public function asIdn(): string
     {
         return $this->idn;
     }
 
-    public function getPunycode(): string
+    public function asPunycode(): string
     {
         return $this->punycode;
     }
@@ -75,7 +75,7 @@ class Domain
             return null;
         }
 
-        $domainWithoutZone = str_replace('.'.$this->getZone()->getIdn(), '', $this->idn);
+        $domainWithoutZone = str_replace('.'.$this->getZone()->asIdn(), '', $this->idn);
 
         return new Domain($domainWithoutZone);
     }
@@ -98,14 +98,14 @@ class Domain
             return null;
         }
 
-        $domainWithoutTld = str_replace('.'.$this->getTld()->getIdn(), '', $this->idn);
+        $domainWithoutTld = str_replace('.'.$this->getTld()->asIdn(), '', $this->idn);
 
         return new Domain($domainWithoutTld);
     }
 
     public function equals(Domain $domain): bool
     {
-        return $this->getIdn() === $domain->getIdn();
+        return $this->asIdn() === $domain->asIdn();
     }
 
     public function __toString(): string

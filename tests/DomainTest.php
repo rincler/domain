@@ -16,7 +16,7 @@ class DomainTest extends TestCase
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedIdn, $domain->getIdn());
+        $this->assertEquals($expectedIdn, $domain->asIdn());
     }
 
     /**
@@ -26,7 +26,7 @@ class DomainTest extends TestCase
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($exptectedPunycode, $domain->getPunycode());
+        $this->assertEquals($exptectedPunycode, $domain->asPunycode());
     }
 
     public function providerForGetIdnAndGetPunycode()
@@ -129,7 +129,7 @@ class DomainTest extends TestCase
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedIdn, $domain->getZone() ? $domain->getZone()->getIdn() : '');
+        $this->assertEquals($expectedIdn, $domain->getZone() ? $domain->getZone()->asIdn() : '');
     }
 
     public function providerForGetZone()
@@ -152,7 +152,7 @@ class DomainTest extends TestCase
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedIdn, $domain->getWithoutZone() ? $domain->getWithoutZone()->getIdn() : '');
+        $this->assertEquals($expectedIdn, $domain->getWithoutZone() ? $domain->getWithoutZone()->asIdn() : '');
     }
 
     public function providerForGetWithoutZone()
@@ -175,7 +175,7 @@ class DomainTest extends TestCase
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedIdn, $domain->getTld() ? $domain->getTld()->getIdn() : '');
+        $this->assertEquals($expectedIdn, $domain->getTld() ? $domain->getTld()->asIdn() : '');
     }
 
     public function providerForGetTld()
@@ -198,7 +198,7 @@ class DomainTest extends TestCase
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedIdn, $domain->getWithoutTld() ? $domain->getWithoutTld()->getIdn() : '');
+        $this->assertEquals($expectedIdn, $domain->getWithoutTld() ? $domain->getWithoutTld()->asIdn() : '');
     }
 
     public function providerForGetWithoutTld()
