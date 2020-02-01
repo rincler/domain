@@ -39,7 +39,7 @@ echo $domain->asPunycode(); // xn--d1acufc.xnn
 ## Documentation
 
 - static `isValid(): bool` - Returns `true` if domain is valid, returns `false` otherwise
-- `__constructor(string $domain)` - The constructor validates domain (throws exception if domain is not valid) and creates object of domain
+- `__constructor(string $domain)` - The constructor validates domain (throws `InvalidDomainException` if domain is not valid) and creates object of domain
 - `getIdn(): string` - Returns domain as IDN string
 - `getPunycode(): string` - Returns domain as Punycode string
 - `getLevel(): int` - Returns domain levels count
