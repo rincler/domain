@@ -29,11 +29,11 @@ class Domain
 
     public function __construct(string $domain)
     {
-        $idn = \idn_to_utf8($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
-
         if ($domain === '') {
             throw new InvalidDomainException(0, 'Empty domain');
         }
+
+        $idn = \idn_to_utf8($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
 
         if ($idn === false) {
             throw new InvalidDomainException($idnInfo['errors'], sprintf('Domain "%s" is not valid. Idn error bitset: %d', $domain, $idnInfo['errors']));
