@@ -8,8 +8,7 @@ install:
   - composer install
 
 script:
-  - composer run check-code-style
-  - composer run test
+  - composer run check-all
 
 cache:
   directories:
