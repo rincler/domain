@@ -13,7 +13,7 @@ class InvalidDomainException extends \Exception
      */
     private $idnErrorBitSet;
 
-    public function __construct(int $idnErrorBitSet, $message = '', $code = 0, Throwable $previous = null)
+    public function __construct(int $idnErrorBitSet, string $message = '', int $code = 0, Throwable $previous = null)
     {
         $this->idnErrorBitSet = $idnErrorBitSet;
 

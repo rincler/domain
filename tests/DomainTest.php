@@ -13,7 +13,7 @@ class DomainTest extends TestCase
     /**
      * @dataProvider providerForGetIdnAndGetPunycode
      */
-    public function testGetIdn(string $domain, string $expectedIdn, string $exptectedPunycode)
+    public function testGetIdn(string $domain, string $expectedIdn, string $exptectedPunycode): void
     {
         $domain = new Domain($domain);
 
@@ -23,14 +23,14 @@ class DomainTest extends TestCase
     /**
      * @dataProvider providerForGetIdnAndGetPunycode
      */
-    public function testGetPunycode(string $domain, string $expectedIdn, string $exptectedPunycode)
+    public function testGetPunycode(string $domain, string $expectedIdn, string $exptectedPunycode): void
     {
         $domain = new Domain($domain);
 
         $this->assertEquals($exptectedPunycode, $domain->asPunycode());
     }
 
-    public function providerForGetIdnAndGetPunycode()
+    public function providerForGetIdnAndGetPunycode(): array
     {
         return [
             ['com', 'com', 'com'],
@@ -65,14 +65,14 @@ class DomainTest extends TestCase
     /**
      * @dataProvider providerForGetLevel
      */
-    public function testGetLevel(string $domain, int $expectedLevel)
+    public function testGetLevel(string $domain, int $expectedLevel): void
     {
         $domain = new Domain($domain);
 
         $this->assertEquals($expectedLevel, $domain->getLevel());
     }
 
-    public function providerForGetLevel()
+    public function providerForGetLevel(): array
     {
         return [
             ['ru', 1],
@@ -85,12 +85,12 @@ class DomainTest extends TestCase
     /**
      * @dataProvider providerForIsValid
      */
-    public function testIsValid(string $domain, bool $expectedIsValid)
+    public function testIsValid(string $domain, bool $expectedIsValid): void
     {
         $this->assertEquals($expectedIsValid, Domain::isValid($domain));
     }
 
-    public function providerForIsValid()
+    public function providerForIsValid(): array
     {
         return [
             ['', false],
@@ -126,14 +126,14 @@ class DomainTest extends TestCase
     /**
      * @dataProvider providerForGetZone
      */
-    public function testGetZone(string $domain, string $expectedIdn)
+    public function testGetZone(string $domain, string $expectedIdn): void
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedIdn, $domain->getZone() ? $domain->getZone()->asIdn() : '');
+        $this->assertEquals($expectedIdn, $domain->getZone() !== null ? $domain->getZone()->asIdn() : '');
     }
 
-    public function providerForGetZone()
+    public function providerForGetZone(): array
     {
         return [
             ['com', ''],
@@ -149,14 +149,14 @@ class DomainTest extends TestCase
     /**
      * @dataProvider providerForGetWithoutZone
      */
-    public function testGetWithoutZone(string $domain, string $expectedIdn)
+    public function testGetWithoutZone(string $domain, string $expectedIdn): void
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedIdn, $domain->getWithoutZone() ? $domain->getWithoutZone()->asIdn() : '');
+        $this->assertEquals($expectedIdn, $domain->getWithoutZone() !== null ? $domain->getWithoutZone()->asIdn() : '');
     }
 
-    public function providerForGetWithoutZone()
+    public function providerForGetWithoutZone(): array
     {
         return [
             ['com', ''],
@@ -172,14 +172,14 @@ class DomainTest extends TestCase
     /**
      * @dataProvider providerForGetTld
      */
-    public function testGetTld(string $domain, string $expectedIdn)
+    public function testGetTld(string $domain, string $expectedIdn): void
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedIdn, $domain->getTld() ? $domain->getTld()->asIdn() : '');
+        $this->assertEquals($expectedIdn, $domain->getTld() !== null ? $domain->getTld()->asIdn() : '');
     }
 
-    public function providerForGetTld()
+    public function providerForGetTld(): array
     {
         return [
             ['com', ''],
@@ -195,14 +195,14 @@ class DomainTest extends TestCase
     /**
      * @dataProvider providerForGetWithoutTld
      */
-    public function testGetWithoutTld(string $domain, string $expectedIdn)
+    public function testGetWithoutTld(string $domain, string $expectedIdn): void
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedIdn, $domain->getWithoutTld() ? $domain->getWithoutTld()->asIdn() : '');
+        $this->assertEquals($expectedIdn, $domain->getWithoutTld() !== null ? $domain->getWithoutTld()->asIdn() : '');
     }
 
-    public function providerForGetWithoutTld()
+    public function providerForGetWithoutTld(): array
     {
         return [
             ['com', ''],
@@ -218,13 +218,13 @@ class DomainTest extends TestCase
     /**
      * @dataProvider providerForInvalidDomain
      */
-    public function testInvalidDomain(string $domain)
+    public function testInvalidDomain(string $domain): void
     {
         $this->expectException(InvalidDomainException::class);
         new Domain($domain);
     }
 
-    public function providerForInvalidDomain()
+    public function providerForInvalidDomain(): array
     {
         return [
             [''],
@@ -242,7 +242,7 @@ class DomainTest extends TestCase
         ];
     }
 
-    public function testEqualsDomain()
+    public function testEqualsDomain(): void
     {
         $domainA = new Domain('abc.ru');
         $domainB = new Domain('abc.ru');

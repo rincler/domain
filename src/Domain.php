@@ -29,17 +29,24 @@ class Domain
 
     public function __construct(string $domain)
     {
-        $this->idn = \idn_to_utf8($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
+        $idn = \idn_to_utf8($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
 
-        if ($this->idn === false) {
+        if ($domain === '') {
+            throw new InvalidDomainException(0, 'Empty domain');
+        }
+
+        if ($idn === false) {
             throw new InvalidDomainException($idnInfo['errors'], sprintf('Domain "%s" is not valid. Idn error bitset: %d', $domain, $idnInfo['errors']));
         }
 
-        $this->punycode = \idn_to_ascii($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
+        $punycode = \idn_to_ascii($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
 
-        if ($this->punycode === false) {
+        if ($punycode === false) {
             throw new InvalidDomainException($idnInfo['errors'], sprintf('Domain "%s" is not valid. Idn error bitset: %d', $domain, $idnInfo['errors']));
         }
+
+        $this->idn = $idn;
+        $this->punycode = $punycode;
 
         $this->removeDotOnEnd();
         $this->toLowerCase();
@@ -76,7 +83,7 @@ class Domain
 
     public function getWithoutZone(): ?Domain
     {
-        if (!$this->getZone()) {
+        if ($this->getZone() === null) {
             return null;
         }
 
@@ -99,7 +106,7 @@ class Domain
 
     public function getWithoutTld(): ?Domain
     {
-        if (!$this->getTld()) {
+        if ($this->getTld() === null) {
             return null;
         }
 
