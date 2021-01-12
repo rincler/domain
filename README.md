@@ -48,7 +48,7 @@ echo $domain->asPunycode(); // xn--d1acufc.xnn
 - `getTld(): Domain` - Returns top-level domain
 - `getWithoutTld(): Domain` - Returns domain without top-level domain
 - `equals(Domain $domain): bool` - Returns `true` if current domain equals checked domain, returns `false` otherwise
-- `__toString(): string` - Analog for `getIdn`
+- `__toString(): string` - Analog for `asIdn`
 
 ## Why PHP >= 7.3?
 
