@@ -19,14 +19,9 @@
         "ext-mbstring" : "*"
     },
     "require-dev": {
-        "phpunit/phpunit": "^8.5",
-        "friendsofphp/php-cs-fixer": "^2.16",
-        "phpstan/phpstan": "^0.12.8"
+        "phpunit/phpunit": "^8.5"
     },
     "scripts": {
-        "test": "phpunit",
-        "check-code-style": "php-cs-fixer fix --dry-run --verbose",
-        "analyse": "phpstan analyse --level max",
-        "check-all": "composer run test && composer run check-code-style && composer run analyse"
+        "test": "phpunit"
     }
 }

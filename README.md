@@ -1,7 +1,7 @@
 # Domain
 
 [![Packagist Version](https://img.shields.io/packagist/v/rincler/domain)](https://packagist.org/packages/rincler/domain)
-[![Build Status](https://travis-ci.com/rincler/domain.svg?branch=master)](https://travis-ci.com/rincler/domain)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/rincler/domain/CI)
 ![PHP from Packagist (specify version)](https://img.shields.io/packagist/php-v/rincler/domain/1.0.0)
 
 Domain name value object
@@ -31,11 +31,13 @@ $domain = new Domain('xn--d1acufc.xn--p1ai');
 echo $domain->asIdn(); // домен.рф
 echo $domain->asPunycode(); // xn--d1acufc.xnn
 ```
-    
+
 ## Installation
 
+```bash
     composer require rincler/domain
-    
+```
+
 ## Documentation
 
 - static `isValid(): bool` - Returns `true` if domain is valid, returns `false` otherwise
@@ -52,7 +54,7 @@ echo $domain->asPunycode(); // xn--d1acufc.xnn
 
 ## Why PHP >= 7.3?
 
-Validation of domain in intl extension fixed in 7.3.0. See http://bugs.php.net/76829
+Validation of domain in intl extension fixed in 7.3.0. See <http://bugs.php.net/76829>
 
 ## License
 

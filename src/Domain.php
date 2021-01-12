@@ -36,13 +36,19 @@ class Domain
         $idn = \idn_to_utf8($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
 
         if ($idn === false) {
-            throw new InvalidDomainException($idnInfo['errors'], sprintf('Domain "%s" is not valid. Idn error bitset: %d', $domain, $idnInfo['errors']));
+            throw new InvalidDomainException(
+                $idnInfo['errors'],
+                sprintf('Domain "%s" is not valid. Idn error bitset: %d', $domain, $idnInfo['errors'])
+            );
         }
 
         $punycode = \idn_to_ascii($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
 
         if ($punycode === false) {
-            throw new InvalidDomainException($idnInfo['errors'], sprintf('Domain "%s" is not valid. Idn error bitset: %d', $domain, $idnInfo['errors']));
+            throw new InvalidDomainException(
+                $idnInfo['errors'],
+                sprintf('Domain "%s" is not valid. Idn error bitset: %d', $domain, $idnInfo['errors'])
+            );
         }
 
         $this->idn = $idn;
@@ -87,7 +93,7 @@ class Domain
             return null;
         }
 
-        $domainWithoutZone = str_replace('.'.$this->getZone()->asIdn(), '', $this->idn);
+        $domainWithoutZone = str_replace('.' . $this->getZone()->asIdn(), '', $this->idn);
 
         return new Domain($domainWithoutZone);
     }
@@ -110,7 +116,7 @@ class Domain
             return null;
         }
 
-        $domainWithoutTld = str_replace('.'.$this->getTld()->asIdn(), '', $this->idn);
+        $domainWithoutTld = str_replace('.' . $this->getTld()->asIdn(), '', $this->idn);
 
         return new Domain($domainWithoutTld);
     }
