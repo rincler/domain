@@ -11,6 +11,25 @@ use Rincler\Domain\InvalidDomainException;
 class DomainTest extends TestCase
 {
     /**
+     * @dataProvider providerForConstruct
+     */
+    public function testConstruct(string $domain, string $expectedDomain): void
+    {
+        $domain = new Domain($domain);
+
+        $this->assertEquals($expectedDomain, (string) $domain);
+    }
+
+    public function providerForConstruct(): array
+    {
+        return [
+            [' example.com ', 'example.com'],
+            ['example.com.', 'example.com'],
+            ['EXAMPLE.com', 'example.com'],
+        ];
+    }
+
+    /**
      * @dataProvider providerForGetIdnAndGetPunycode
      */
     public function testGetIdn(string $domain, string $expectedIdn, string $exptectedPunycode): void

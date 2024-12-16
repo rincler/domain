@@ -29,6 +29,8 @@ class Domain
 
     public function __construct(string $domain)
     {
+        $domain = trim($domain);
+
         if ($domain === '') {
             throw new InvalidDomainException(0, 'Empty domain');
         }
