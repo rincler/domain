@@ -1,8 +1,8 @@
 # Domain
 
 [![Packagist Version](https://img.shields.io/packagist/v/rincler/domain)](https://packagist.org/packages/rincler/domain)
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/rincler/domain/CI)
-![PHP from Packagist (specify version)](https://img.shields.io/packagist/php-v/rincler/domain/1.0.0)
+![PHP Version](https://img.shields.io/packagist/php-v/rincler/domain)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/rincler/domain/ci.yml?branch=master)
 
 Domain name value object
 
