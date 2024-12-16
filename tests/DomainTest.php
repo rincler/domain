@@ -17,7 +17,7 @@ class DomainTest extends TestCase
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedDomain, (string) $domain);
+        self::assertEquals($expectedDomain, (string) $domain);
     }
 
     public function providerForConstruct(): array
@@ -30,26 +30,26 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForGetIdnAndGetPunycode
+     * @dataProvider providerForAsIdnAndAsPunycode
      */
-    public function testGetIdn(string $domain, string $expectedIdn, string $exptectedPunycode): void
+    public function testAsIdn(string $domain, string $expectedIdn, string $expectedPunycode): void
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedIdn, $domain->asIdn());
+        self::assertEquals($expectedIdn, $domain->asIdn());
     }
 
     /**
-     * @dataProvider providerForGetIdnAndGetPunycode
+     * @dataProvider providerForAsIdnAndAsPunycode
      */
-    public function testGetPunycode(string $domain, string $expectedIdn, string $exptectedPunycode): void
+    public function testAsPunycode(string $domain, string $expectedIdn, string $expectedPunycode): void
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($exptectedPunycode, $domain->asPunycode());
+        self::assertEquals($expectedPunycode, $domain->asPunycode());
     }
 
-    public function providerForGetIdnAndGetPunycode(): array
+    public function providerForAsIdnAndAsPunycode(): array
     {
         return [
             ['com', 'com', 'com'],
@@ -88,7 +88,7 @@ class DomainTest extends TestCase
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedLevel, $domain->getLevel());
+        self::assertEquals($expectedLevel, $domain->getLevel());
     }
 
     public function providerForGetLevel(): array
@@ -106,7 +106,7 @@ class DomainTest extends TestCase
      */
     public function testIsValid(string $domain, bool $expectedIsValid): void
     {
-        $this->assertEquals($expectedIsValid, Domain::isValid($domain));
+        self::assertEquals($expectedIsValid, Domain::isValid($domain));
     }
 
     public function providerForIsValid(): array
@@ -149,7 +149,7 @@ class DomainTest extends TestCase
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedIdn, $domain->getZone() !== null ? $domain->getZone()->asIdn() : '');
+        self::assertEquals($expectedIdn, $domain->getZone() !== null ? $domain->getZone()->asIdn() : '');
     }
 
     public function providerForGetZone(): array
@@ -172,7 +172,7 @@ class DomainTest extends TestCase
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedIdn, $domain->getWithoutZone() !== null ? $domain->getWithoutZone()->asIdn() : '');
+        self::assertEquals($expectedIdn, $domain->getWithoutZone() !== null ? $domain->getWithoutZone()->asIdn() : '');
     }
 
     public function providerForGetWithoutZone(): array
@@ -195,7 +195,7 @@ class DomainTest extends TestCase
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedIdn, $domain->getTld() !== null ? $domain->getTld()->asIdn() : '');
+        self::assertEquals($expectedIdn, $domain->getTld() !== null ? $domain->getTld()->asIdn() : '');
     }
 
     public function providerForGetTld(): array
@@ -218,7 +218,7 @@ class DomainTest extends TestCase
     {
         $domain = new Domain($domain);
 
-        $this->assertEquals($expectedIdn, $domain->getWithoutTld() !== null ? $domain->getWithoutTld()->asIdn() : '');
+        self::assertEquals($expectedIdn, $domain->getWithoutTld() !== null ? $domain->getWithoutTld()->asIdn() : '');
     }
 
     public function providerForGetWithoutTld(): array
@@ -261,13 +261,12 @@ class DomainTest extends TestCase
         ];
     }
 
-    public function testEqualsDomain(): void
+    /**
+     * @testWith ["abc.ru", "abc.ru", true]
+     *           ["abc.ru", "abcd.ru", false]
+     */
+    public function testEqualsDomain(string $domain1, string $domain2, bool $equal): void
     {
-        $domainA = new Domain('abc.ru');
-        $domainB = new Domain('abc.ru');
-        $domainC = new Domain('abcd.ru');
-
-        $this->assertTrue($domainA->equals($domainB));
-        $this->assertFalse($domainA->equals($domainC));
+        $this->assertEquals($equal, (new Domain($domain1))->equals(new Domain($domain2)));
     }
 }
