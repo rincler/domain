@@ -13,23 +13,23 @@ Domain name value object
 
 use \Rincler\Domain\Domain;
 
-$domain = new Domain('sub.domain.com');
-echo $domain; // sub.domain.com
-echo $domain->asIdn(); // sub.domain.com
-echo $domain->asPunycode(); // sub.domain.com
-echo $domain->getZone(); // domain.com
+$domain = new Domain('sub.example.com');
+echo $domain; // sub.example.com
+echo $domain->asIdn(); // sub.example.com
+echo $domain->asPunycode(); // sub.example.com
+echo $domain->getZone(); // example.com
 echo $domain->getWithoutZone(); // sub
 echo $domain->getTld(); // com
-echo $domain->getWithoutTld(); // sub.domain
+echo $domain->getWithoutTld(); // sub.example
 echo $domain->getLevel(); // 3
 
-$domain = new Domain('домен.рф');
-echo $domain->asIdn(); // домен.рф
-echo $domain->asPunycode(); // xn--d1acufc.xn--p1ai
+$domain = new Domain('пример.рф');
+echo $domain->asIdn(); // пример.рф
+echo $domain->asPunycode(); // xn--e1afmkfd.xn--p1ai
 
-$domain = new Domain('xn--d1acufc.xn--p1ai');
-echo $domain->asIdn(); // домен.рф
-echo $domain->asPunycode(); // xn--d1acufc.xnn
+$domain = new Domain('xn--e1afmkfd.xn--p1ai');
+echo $domain->asIdn(); // пример.рф
+echo $domain->asPunycode(); // xn--e1afmkfd.xn--p1ai
 ```
 
 ## Installation
@@ -51,6 +51,75 @@ echo $domain->asPunycode(); // xn--d1acufc.xnn
 - `getWithoutTld(): Domain` - Returns domain without top-level domain
 - `equals(Domain $domain): bool` - Returns `true` if current domain equals checked domain, returns `false` otherwise
 - `__toString(): string` - Analog for `asIdn`
+
+### Custom TLDs
+
+You can use custom TLDs, e.g.: `net.ru` or `org.ru`, using the `setCustomTlds` method:
+
+```php
+<?php
+
+use \Rincler\Domain\Domain;
+
+$domain = new Domain('example.net.ru');
+
+echo $domain->getTld(); // ru
+
+Domain::setCustomTlds(static function () {
+    return ['net.ru', 'org.ru'];
+});
+
+echo $domain->getTld(); // net.ru
+```
+
+You can specify the TLD retriever mode:
+
+- `TldRetrievalMode::TRUE()` - the mode to retrieving only true TLD
+- `TldRetrievalMode::CUSTOM()` - the mode to retrieving only custom TLD
+- `TldRetrievalMode::MIX()` - the mode to retrieving custom TLD and true TLD if custom is not found (this mode is used by default)
+
+```php
+<?php
+
+use \Rincler\Domain\Domain;
+use \Rincler\Domain\TldRetrievalMode
+
+$domain = new Domain('example.net.ru');
+
+Domain::setCustomTlds(static function () {
+    return ['net.ru', 'org.ru'];
+});
+
+echo $domain->getTld(TldRetrievalMode::TRUE()); // ru
+echo $domain->getTld(TldRetrievalMode::CUSTOM()); // net.ru
+echo $domain->getTld(TldRetrievalMode::MIX()); // net.ru
+
+$domain = new Domain('example.ru');
+echo $domain->getTld(TldRetrievalMode::TRUE()); // ru
+echo $domain->getTld(TldRetrievalMode::CUSTOM()); // <null>
+echo $domain->getTld(TldRetrievalMode::MIX()); // ru
+```
+
+Also, you can specify the TLD retriever mode globally:
+
+```php
+<?php
+
+use \Rincler\Domain\Domain;
+use \Rincler\Domain\TldRetrievalMode
+
+$domain = new Domain('example.net.ru');
+
+Domain::setDefaultTldRetrievalMode(TldRetrievalMode::TRUE());
+
+Domain::setCustomTlds(static function () {
+    return ['net.ru', 'org.ru'];
+});
+
+echo $domain->getTld(); // ru
+// You can still pass the mode as argument:
+echo $domain->getTld(TldRetrievalMode::CUSTOM()); // net.ru
+```
 
 ## Why PHP >= 7.3?
 
