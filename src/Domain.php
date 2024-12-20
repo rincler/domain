@@ -86,7 +86,7 @@ class Domain
 
     public function getLevel(): int
     {
-        $labels = array_filter(explode('.', $this->asIdn()));
+        $labels = explode('.', $this->asIdn());
 
         return count($labels);
     }
