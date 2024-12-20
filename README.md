@@ -4,7 +4,7 @@
 ![PHP Version](https://img.shields.io/packagist/php-v/rincler/domain)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/rincler/domain/ci.yml?branch=master)
 
-Domain name value object
+A domain name value object. Works with IDN and punycode syntax, validates and easily retrieves the level, zone and TLD (top-level domain).
 
 ## Usage
 
