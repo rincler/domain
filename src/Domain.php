@@ -16,10 +16,25 @@ class Domain
      */
     private $punycode;
 
+    /**
+     * @var TldRetrievalMode|null
+     */
+    private static $defaultTldRetrievalMode = null;
+
+    /**
+     * @var callable|null
+     */
+    private static $customTldsExtractor = null;
+
+    /**
+     * @var Domain[]|null
+     */
+    private static $customTlds = null;
+
     public static function isValid(string $domain): bool
     {
         try {
-            new Domain($domain);
+            new static($domain);
 
             return true;
         } catch (InvalidDomainException $e) {
@@ -27,8 +42,10 @@ class Domain
         }
     }
 
-    public function __construct(string $domain)
+    final public function __construct(string $domain)
     {
+        $domain = trim($domain);
+
         if ($domain === '') {
             throw new InvalidDomainException(0, 'Empty domain');
         }
@@ -54,8 +71,7 @@ class Domain
         $this->idn = $idn;
         $this->punycode = $punycode;
 
-        $this->removeDotOnEnd();
-        $this->toLowerCase();
+        $this->normalize();
     }
 
     public function asIdn(): string
@@ -70,58 +86,74 @@ class Domain
 
     public function getLevel(): int
     {
-        $labels = array_filter(explode('.', $this->idn));
+        $labels = explode('.', $this->asIdn());
 
         return count($labels);
     }
 
-    public function getZone(): ?Domain
+    public function getZone(): ?self
     {
         if ($this->getLevel() === 1) {
             return null;
         }
 
-        $dotPosition = mb_strpos($this->idn, '.');
-        $zone = mb_substr($this->idn, $dotPosition + 1);
+        $dotPosition = mb_strpos($this->asIdn(), '.');
+        $zone = mb_substr($this->asIdn(), $dotPosition + 1);
 
-        return new Domain($zone);
+        return new static($zone);
     }
 
-    public function getWithoutZone(): ?Domain
+    public function getWithoutZone(): ?self
     {
         if ($this->getZone() === null) {
-            return null;
+            return new static($this->asIdn());
         }
 
-        $domainWithoutZone = str_replace('.' . $this->getZone()->asIdn(), '', $this->idn);
+        $domainWithoutZone = preg_replace("/\.{$this->getZone()->asIdn()}$/u", '', $this->asIdn());
 
-        return new Domain($domainWithoutZone);
+        return new static($domainWithoutZone);
     }
 
-    public function getTld(): ?Domain
+    public function getTld(?TldRetrievalMode $mode = null): ?self
     {
+        $mode = $mode ?? static::getDefaultTldRetrievalMode();
+
         if ($this->getLevel() === 1) {
             return null;
         }
 
-        $dotPosition = mb_strrpos($this->idn, '.');
-        $tld = mb_substr($this->idn, $dotPosition + 1);
+        if (!$mode->equals(TldRetrievalMode::TRUE())) {
+            foreach (static::getCustomTlds() as $customTld) {
+                if (preg_match("/\.$customTld$/u", $this->asIdn())) {
+                    return $customTld;
+                }
+            }
+        }
 
-        return new Domain($tld);
-    }
-
-    public function getWithoutTld(): ?Domain
-    {
-        if ($this->getTld() === null) {
+        if ($mode->equals(TldRetrievalMode::CUSTOM())) {
             return null;
         }
 
-        $domainWithoutTld = str_replace('.' . $this->getTld()->asIdn(), '', $this->idn);
+        $dotPosition = mb_strrpos($this->asIdn(), '.');
+        $tld = mb_substr($this->asIdn(), $dotPosition + 1);
 
-        return new Domain($domainWithoutTld);
+        return new static($tld);
     }
 
-    public function equals(Domain $domain): bool
+    public function getWithoutTld(?TldRetrievalMode $mode = null): ?self
+    {
+        $mode = $mode ?? static::getDefaultTldRetrievalMode();
+
+        if ($this->getTld($mode) === null) {
+            return new static($this->asIdn());
+        }
+
+        $domainWithoutTld = preg_replace("/\.{$this->getTld($mode)->asIdn()}$/u", '', $this->asIdn());
+
+        return new static($domainWithoutTld);
+    }
+
+    public function equals(self $domain): bool
     {
         return $this->asIdn() === $domain->asIdn();
     }
@@ -131,18 +163,78 @@ class Domain
         return $this->idn;
     }
 
+    public static function setDefaultTldRetrievalMode(TldRetrievalMode $mode): void
+    {
+        self::$defaultTldRetrievalMode = $mode;
+    }
+
+    protected static function getDefaultTldRetrievalMode(): TldRetrievalMode
+    {
+        return self::$defaultTldRetrievalMode ?? TldRetrievalMode::MIX();
+    }
+
+    /**
+     * Defines custom TLDs.
+     *
+     * @param callable $extractor Callback, that returns an array of custom TLDs, e.g. `[net.ru, org.ru]`.
+     *                            The callback is called (on `getTld` and `getWithoutTld`) once and returned array is cached.
+     */
+    public static function setCustomTlds(callable $extractor): void
+    {
+        self::$customTldsExtractor = $extractor;
+        self::$customTlds = null;
+    }
+
+    public static function unsetCustomTlds(): void
+    {
+        self::$customTldsExtractor = null;
+        self::$customTlds = null;
+    }
+
+    /**
+     * @return Domain[]
+     */
+    protected static function getCustomTlds(): array
+    {
+        if (self::$customTldsExtractor === null) {
+            return [];
+        }
+
+        if (self::$customTlds !== null) {
+            return self::$customTlds;
+        }
+
+        $customTlds = call_user_func(self::$customTldsExtractor);
+
+        self::$customTlds = array_map(static function (string $customTld) {
+            return new static($customTld);
+        }, $customTlds);
+
+        usort(self::$customTlds, function (Domain $tldA, Domain $tldB) {
+            return $tldB->getLevel() <=> $tldA->getLevel();
+        });
+
+        return self::$customTlds;
+    }
+
+    private function normalize(): void
+    {
+        $this->removeDotOnEnd();
+        $this->toLowerCase();
+    }
+
     private function removeDotOnEnd(): void
     {
-        $lastCharacter = mb_substr($this->idn, -1);
+        $lastCharacter = mb_substr($this->asIdn(), -1);
         if ($lastCharacter === '.') {
-            $this->idn = mb_substr($this->idn, 0, -1);
-            $this->punycode = mb_substr($this->punycode, 0, -1);
+            $this->idn = mb_substr($this->asIdn(), 0, -1);
+            $this->punycode = mb_substr($this->asPunycode(), 0, -1);
         }
     }
 
     private function toLowerCase(): void
     {
-        $this->idn = mb_strtolower($this->idn);
-        $this->punycode = mb_strtolower($this->punycode);
+        $this->idn = mb_strtolower($this->asIdn());
+        $this->punycode = mb_strtolower($this->asPunycode());
     }
 }

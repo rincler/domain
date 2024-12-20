@@ -1,6 +1,6 @@
 {
     "name": "rincler/domain",
-    "description": "Domain name value object",
+    "description": "A domain name value object. Works with IDN and punycode syntax, validates and easily retrieves the level, zone and TLD (top-level domain).",
     "type": "library",
     "license": "MIT",
     "autoload": {
@@ -16,7 +16,8 @@
     "require": {
         "php": ">=7.3.0",
         "ext-intl" : "*",
-        "ext-mbstring" : "*"
+        "ext-mbstring" : "*",
+        "myclabs/php-enum": "^1.8"
     },
     "require-dev": {
         "phpunit/phpunit": "^8.5"
