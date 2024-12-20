@@ -1,6 +1,6 @@
 {
     "name": "rincler/domain",
-    "description": "Domain name value object",
+    "description": "A domain name value object. Works with IDN and punycode syntax, validates and easily retrieves the level, zone and TLD (top-level domain).",
     "type": "library",
     "license": "MIT",
     "autoload": {
