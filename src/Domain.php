@@ -27,7 +27,7 @@ class Domain
     private static $customTldsExtractor = null;
 
     /**
-     * @var Domain[]|null
+     * @var static[]|null
      */
     private static $customTlds = null;
 
@@ -47,7 +47,7 @@ class Domain
         $domain = trim($domain);
 
         if ($domain === '') {
-            throw new InvalidDomainException(0, 'Empty domain');
+            throw new InvalidDomainException(0, 'Empty domain.');
         }
 
         $idn = \idn_to_utf8($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
@@ -64,7 +64,14 @@ class Domain
         if ($punycode === false) {
             throw new InvalidDomainException(
                 $idnInfo['errors'],
-                sprintf('Domain "%s" is not valid. Idn error bitset: %d', $domain, $idnInfo['errors'])
+                sprintf('Domain "%s" is not valid. Idn error bitset: %d.', $domain, $idnInfo['errors'])
+            );
+        }
+
+        if (!\filter_var($punycode, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
+            throw new InvalidDomainException(
+                0,
+                sprintf('Domain "%s" is not valid. Invalid characters.', $domain)
             );
         }
 
@@ -84,11 +91,14 @@ class Domain
         return $this->punycode;
     }
 
+    public function equals(self $domain): bool
+    {
+        return $this->asIdn() === $domain->asIdn();
+    }
+
     public function getLevel(): int
     {
-        $labels = explode('.', $this->asIdn());
-
-        return count($labels);
+        return count($this->getLabels());
     }
 
     public function getZone(): ?self
@@ -153,9 +163,41 @@ class Domain
         return new static($domainWithoutTld);
     }
 
-    public function equals(self $domain): bool
+    /**
+     * @return static[]
+     */
+    public function getLabels(): array
     {
-        return $this->asIdn() === $domain->asIdn();
+        $labels = array_reverse(explode('.', $this->asIdn()));
+
+        return array_map(static function (string $label) {
+            return new static($label);
+        }, $labels);
+    }
+
+    public function getLabel(int $level): self
+    {
+        $labels = $this->getLabels();
+        $idx = $level - 1;
+
+        if (!isset($labels[$idx])) {
+            throw new \OutOfRangeException(sprintf('A label on the level %d does not exist.', $level));
+        }
+
+        return $labels[$idx];
+    }
+
+    public function sliceToLevel(int $level): self
+    {
+        $labels = $this->getLabels();
+
+        if (!isset($labels[$level - 1])) {
+            throw new \OutOfRangeException(sprintf('A label on the level %d does not exist.', $level));
+        }
+
+        $slice = array_slice($labels, 0, $level);
+
+        return new static(implode('.', array_reverse($slice)));
     }
 
     public function __toString(): string
@@ -192,7 +234,7 @@ class Domain
     }
 
     /**
-     * @return Domain[]
+     * @return static[]
      */
     protected static function getCustomTlds(): array
     {
@@ -210,7 +252,7 @@ class Domain
             return new static($customTld);
         }, $customTlds);
 
-        usort(self::$customTlds, function (Domain $tldA, Domain $tldB) {
+        usort(self::$customTlds, function (self $tldA, self $tldB) {
             return $tldB->getLevel() <=> $tldA->getLevel();
         });
 
@@ -219,11 +261,11 @@ class Domain
 
     private function normalize(): void
     {
-        $this->removeDotOnEnd();
+        $this->removeDotAtTheEnd();
         $this->toLowerCase();
     }
 
-    private function removeDotOnEnd(): void
+    private function removeDotAtTheEnd(): void
     {
         $lastCharacter = mb_substr($this->asIdn(), -1);
         if ($lastCharacter === '.') {

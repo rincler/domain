@@ -22,6 +22,9 @@ echo $domain->getWithoutZone(); // sub
 echo $domain->getTld(); // com
 echo $domain->getWithoutTld(); // sub.example
 echo $domain->getLevel(); // 3
+echo $domain->getLabels(); // [new Domain('com'), new Domain('example'), new Domain('sub')]
+echo $domain->getLabel(2); // example
+echo $domain->sliceToLevel(2); // example.com
 
 $domain = new Domain('пример.рф');
 echo $domain->asIdn(); // пример.рф
@@ -30,6 +33,15 @@ echo $domain->asPunycode(); // xn--e1afmkfd.xn--p1ai
 $domain = new Domain('xn--e1afmkfd.xn--p1ai');
 echo $domain->asIdn(); // пример.рф
 echo $domain->asPunycode(); // xn--e1afmkfd.xn--p1ai
+
+var_dump($domain->equals(new Domain('xn--e1afmkfd.xn--p1ai'))) // true
+var_dump($domain->equals(new Domain('пример.рф'))) // true
+var_dump($domain->equals(new Domain('суб.пример.рф'))) // false
+
+var_dump(Domain::isValid('example.com')) // true
+var_dump(Domain::isValid('пример.рф')) // true
+var_dump(Domain::isValid('exam_ple.com')) // false
+var_dump(Domain::isValid('.example.com')) // false
 ```
 
 ## Installation
@@ -40,17 +52,20 @@ echo $domain->asPunycode(); // xn--e1afmkfd.xn--p1ai
 
 ## Documentation
 
-- static `isValid(): bool` - Returns `true` if domain is valid, returns `false` otherwise
-- `__constructor(string $domain)` - The constructor validates domain (throws `InvalidDomainException` if domain is not valid) and creates object of domain
-- `asIdn(): string` - Returns domain as IDN string
-- `asPunycode(): string` - Returns domain as Punycode string
-- `getLevel(): int` - Returns domain levels count
-- `getZone(): Domain` - Returns zone of domain
-- `getWithoutZone(): Domain` - Returns domain without zone
-- `getTld(): Domain` - Returns top-level domain
-- `getWithoutTld(): Domain` - Returns domain without top-level domain
-- `equals(Domain $domain): bool` - Returns `true` if current domain equals checked domain, returns `false` otherwise
-- `__toString(): string` - Analog for `asIdn`
+- static `isValid(): bool` - Returns `true` if the domain is valid, returns `false` otherwise
+- `__constructor(string $domain)` - The constructor validates the domain (throws `InvalidDomainException` if the domain is not valid) and creates the value object
+- `asIdn(): string` - Returns the domain in IDN syntax
+- `asPunycode(): string` - Returns the domain in Punycode syntax
+- `equals(Domain $domain): bool` - Returns `true` if the current domain equals the specified domain, returns `false` otherwise
+- `getLevel(): int` - Returns the number of domain levels
+- `getZone(): Domain` - Returns the domain zone
+- `getWithoutZone(): Domain` - Returns the domain without a zone
+- `getTld(?TldRetrievalMode $mode = null): Domain` - Returns the top-level domain
+- `getWithoutTld(?TldRetrievalMode $mode = null): Domain` - Returns the domain without a top-level domain
+- `getLabels(): array` - Returns an array of the domain labels
+- `getLabel(int $level): array` - Returns the label of the domain with number $level
+- `sliceToLevel(int $level): array` - Returns the domain to level with number $level
+- `__toString(): string` - An equivalent for the `asIdn` method
 
 ### Custom TLDs
 
