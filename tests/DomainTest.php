@@ -21,13 +21,16 @@ class DomainTest extends TestCase
         self::assertEquals($expectedIdn, (string) $domain);
     }
 
-    public function providerForConstruct(): array
+    public static function providerForConstruct(): array
     {
         return [
             [' example.com ', 'example.com'],
             ['example.com.', 'example.com'],
             ['example.com.', 'example.com'],
             ['EXAMPLE.com', 'example.com'],
+            ['12345.com', '12345.com'],
+            ['exam-ple.com', 'exam-ple.com'],
+            ['exam--ple.com', 'exam--ple.com'],
         ];
     }
 
@@ -51,7 +54,7 @@ class DomainTest extends TestCase
         self::assertEquals($expectedPunycode, $domain->asPunycode());
     }
 
-    public function providerForAsIdnAndAsPunycode(): array
+    public static function providerForAsIdnAndAsPunycode(): array
     {
         return [
             ['com', 'com', 'com'],
@@ -84,6 +87,15 @@ class DomainTest extends TestCase
     }
 
     /**
+     * @testWith ["example.com", "example.com", true]
+     *           ["example.com", "another.com", false]
+     */
+    public function testEqualsDomain(string $domain1, string $domain2, bool $equal): void
+    {
+        $this->assertEquals($equal, (new Domain($domain1))->equals(new Domain($domain2)));
+    }
+
+    /**
      * @dataProvider providerForGetLevel
      */
     public function testGetLevel(string $domain, int $expectedLevel): void
@@ -93,7 +105,7 @@ class DomainTest extends TestCase
         self::assertEquals($expectedLevel, $domain->getLevel());
     }
 
-    public function providerForGetLevel(): array
+    public static function providerForGetLevel(): array
     {
         return [
             ['ru', 1],
@@ -111,7 +123,7 @@ class DomainTest extends TestCase
         self::assertEquals($expectedIsValid, Domain::isValid($domain));
     }
 
-    public function providerForIsValid(): array
+    public static function providerForIsValid(): array
     {
         return [
             ['', false],
@@ -154,7 +166,7 @@ class DomainTest extends TestCase
         self::assertEquals($expectedIdn, $domain->getZone() !== null ? $domain->getZone()->asIdn() : '');
     }
 
-    public function providerForGetZone(): array
+    public static function providerForGetZone(): array
     {
         return [
             ['com', ''],
@@ -187,7 +199,7 @@ class DomainTest extends TestCase
         self::assertEquals($expectedIdn, $domain->getWithoutZone() !== null ? $domain->getWithoutZone()->asIdn() : '');
     }
 
-    public function providerForGetWithoutZone(): array
+    public static function providerForGetWithoutZone(): array
     {
         return [
             ['com', 'com'],
@@ -226,7 +238,7 @@ class DomainTest extends TestCase
         self::assertEquals($expectedIdn, $domain->getTld() !== null ? $domain->getTld()->asIdn() : '');
     }
 
-    public function providerForGetTld(): array
+    public static function providerForGetTld(): array
     {
         return [
             ['com', [], TldRetrievalMode::MIX(), ''],
@@ -305,7 +317,7 @@ class DomainTest extends TestCase
         self::assertEquals($expectedIdn, $domain->getWithoutTld() !== null ? $domain->getWithoutTld()->asIdn() : '');
     }
 
-    public function providerForGetWithoutTld(): array
+    public static function providerForGetWithoutTld(): array
     {
         return [
             ['com', [], TldRetrievalMode::MIX(), 'com'],
@@ -377,15 +389,25 @@ class DomainTest extends TestCase
         new Domain($domain);
     }
 
-    public function providerForInvalidDomain(): array
+    public static function providerForInvalidDomain(): array
     {
         return [
             [''],
+            ['  '],
             ['.com'],
             ['.'],
             ['ab--c'],
             ['аб--в'],
             ['com..'],
+            ['-'],
+            ['-.com'],
+            ['a-.com'],
+            ['-a.com'],
+            ['_'],
+            ['_.com'],
+            ['a_.com'],
+            ['_a.com'],
+            ['a_b.com'],
             // maximum length of domain label in punycode - 63 (64 in test)
             ['aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbcc64'],
             ['ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50аааааб'],
@@ -396,11 +418,105 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @testWith ["example.com", "example.com", true]
-     *           ["example.com", "another.com", false]
+     * @dataProvider providerForGetLabels
      */
-    public function testEqualsDomain(string $domain1, string $domain2, bool $equal): void
+    public function testGetLabels(string $domain, array $expectedLabels): void
     {
-        $this->assertEquals($equal, (new Domain($domain1))->equals(new Domain($domain2)));
+        $domain = new Domain($domain);
+
+        self::assertEquals($expectedLabels, $domain->getLabels());
+    }
+
+    public static function providerForGetLabels(): array
+    {
+        return [
+            ['ru', [new Domain('ru')]],
+            ['example.ru', [new Domain('ru'), new Domain('example')]],
+            ['sub.example.ru', [new Domain('ru'), new Domain('example'), new Domain('sub')]],
+            ['пример.рф', [new Domain('рф'), new Domain('пример')]],
+            ['пример.рф', [new Domain('xn--p1ai'), new Domain('xn--e1afmkfd')]],
+            ['xn--e1afmkfd.xn--p1ai', [new Domain('рф'), new Domain('пример')]],
+            ['xn--e1afmkfd.xn--p1ai', [new Domain('xn--p1ai'), new Domain('xn--e1afmkfd')]],
+        ];
+    }
+
+    /**
+     * @dataProvider providerForGetLabelPositive
+     */
+    public function testGetLabelPositive(string $domain, int $level, string $expectedLabel): void
+    {
+        $domain = new Domain($domain);
+
+        self::assertEquals($expectedLabel, $domain->getLabel($level));
+    }
+
+    public static function providerForGetLabelPositive(): array
+    {
+        return [
+            ['sub.domain.com', 1, 'com'],
+            ['sub.domain.com', 2, 'domain'],
+            ['sub.domain.com', 3, 'sub'],
+            ['пример.рф', 1, 'рф'],
+            ['пример.рф', 2, 'пример'],
+        ];
+    }
+
+    /**
+     * @dataProvider providerForGetLabelNegative
+     */
+    public function testGetLabelNegative(string $domain, int $level): void
+    {
+        $this->expectException(\OutOfRangeException::class);
+        $domain = new Domain($domain);
+        $domain->getLabel($level);
+    }
+
+    public static function providerForGetLabelNegative(): array
+    {
+        return [
+            ['sub.domain.com', -1, 'com'],
+            ['sub.domain.com', 0, 'com'],
+            ['sub.domain.com', 4, 'domain'],
+        ];
+    }
+
+    /**
+     * @dataProvider providerForSliceToLevelPositive
+     */
+    public function testSliceToLevelPositive(string $domain, int $level, string $expectedIdn): void
+    {
+        $domain = new Domain($domain);
+
+        self::assertEquals($expectedIdn, $domain->sliceToLevel($level));
+    }
+
+    public static function providerForSliceToLevelPositive(): array
+    {
+        return [
+            ['sub.domain.com', 1, 'com'],
+            ['sub.domain.com', 2, 'domain.com'],
+            ['sub.domain.com', 3, 'sub.domain.com'],
+            ['пример.рф', 1, 'рф'],
+            ['пример.рф', 2, 'пример.рф'],
+        ];
+    }
+
+    /**
+     * @dataProvider providerForSliceToLevelNegative
+     */
+    public function testSliceToLevelNegative(string $domain, int $level): void
+    {
+        $this->expectException(\OutOfRangeException::class);
+        $domain = new Domain($domain);
+        $domain->sliceToLevel($level);
+    }
+
+    public static function providerForSliceToLevelNegative(): array
+    {
+        return [
+            ['sub.domain.com', -1, 'com'],
+            ['sub.domain.com', 0, 'com'],
+            ['sub.domain.com', 4, 'domain'],
+        ];
     }
 }
