@@ -7,6 +7,7 @@ namespace Rincler\Tests;
 use PHPUnit\Framework\TestCase;
 use Rincler\Domain\Domain;
 use Rincler\Domain\InvalidDomainException;
+use Rincler\Domain\RootDomainException;
 use Rincler\Domain\TldRetrievalMode;
 
 class DomainTest extends TestCase
@@ -24,13 +25,13 @@ class DomainTest extends TestCase
     public static function providerForConstruct(): array
     {
         return [
-            [' example.com ', 'example.com'],
-            ['example.com.', 'example.com'],
-            ['example.com.', 'example.com'],
+            ['example.com', 'example.com'],
+            ['example.com.', 'example.com.'],
             ['EXAMPLE.com', 'example.com'],
             ['12345.com', '12345.com'],
             ['exam-ple.com', 'exam-ple.com'],
             ['exam--ple.com', 'exam--ple.com'],
+            ['', ''],
         ];
     }
 
@@ -87,12 +88,22 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @testWith ["example.com", "example.com", true]
-     *           ["example.com", "another.com", false]
+     * @dataProvider providerForEqualsDomain
      */
     public function testEqualsDomain(string $domain1, string $domain2, bool $equal): void
     {
         $this->assertEquals($equal, (new Domain($domain1))->equals(new Domain($domain2)));
+    }
+
+    public function providerForEqualsDomain(): array
+    {
+        return [
+            ['example.com', 'example.com', true],
+            ['example.com.', 'example.com', true],
+            ['EXAMPLE.COM', 'example.com', true],
+            ['example.com', 'another.com', false],
+            ['', '', true],
+        ];
     }
 
     /**
@@ -112,6 +123,7 @@ class DomainTest extends TestCase
             ['example.ru', 2],
             ['пример.рф', 2],
             ['sub.example.ru', 3],
+            ['sub.example.ru.', 3],
         ];
     }
 
@@ -126,11 +138,12 @@ class DomainTest extends TestCase
     public static function providerForIsValid(): array
     {
         return [
-            ['', false],
             ['com', true],
             ['com.', true],
+            ['', true],
+            ['.', true],
+            [' ', false],
             ['com..', false],
-            ['.', false],
             ['ab--c', false],
             ['аб--в', false],
             ['xn--80acd', true],
@@ -163,15 +176,17 @@ class DomainTest extends TestCase
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->getZone() !== null ? $domain->getZone()->asIdn() : '');
+        self::assertEquals($expectedIdn, $domain->getZone());
     }
 
     public static function providerForGetZone(): array
     {
         return [
             ['com', ''],
+            ['com.', ''],
             ['рф', ''],
             ['example.com', 'com'],
+            ['example.com.', 'com.'],
             ['пример.рф', 'рф'],
             ['sub.example.com', 'example.com'],
             ['суб.пример.рф', 'пример.рф'],
@@ -190,21 +205,33 @@ class DomainTest extends TestCase
     }
 
     /**
+     * @dataProvider rootDomainProvider
+     */
+    public function testGetZoneOfRootDomain(string $rootDomain): void
+    {
+        $this->expectException(RootDomainException::class);
+        $domain = new Domain($rootDomain);
+        $domain->getZone();
+    }
+
+    /**
      * @dataProvider providerForGetWithoutZone
      */
     public function testGetWithoutZone(string $domain, string $expectedIdn): void
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->getWithoutZone() !== null ? $domain->getWithoutZone()->asIdn() : '');
+        self::assertEquals($expectedIdn, $domain->getWithoutZone());
     }
 
     public static function providerForGetWithoutZone(): array
     {
         return [
             ['com', 'com'],
+            ['com.', 'com'],
             ['рф', 'рф'],
             ['example.com', 'example'],
+            ['example.com.', 'example'],
             ['пример.рф', 'пример'],
             ['sub.example.com', 'sub'],
             ['суб.пример.рф', 'суб'],
@@ -223,9 +250,19 @@ class DomainTest extends TestCase
     }
 
     /**
+     * @dataProvider rootDomainProvider
+     */
+    public function testGetWithoutZoneOfRootDomain(string $rootDomain): void
+    {
+        $this->expectException(RootDomainException::class);
+        $domain = new Domain($rootDomain);
+        $domain->getWithoutZone();
+    }
+
+    /**
      * @dataProvider providerForGetTld
      */
-    public function testGetTld(string $domain, array $customTlds, TldRetrievalMode $mode, string $expectedIdn): void
+    public function testGetTld(string $domain, array $customTlds, TldRetrievalMode $mode, ?string $expectedIdn): void
     {
         Domain::setDefaultTldRetrievalMode($mode);
 
@@ -235,20 +272,21 @@ class DomainTest extends TestCase
 
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->getTld() !== null ? $domain->getTld()->asIdn() : '');
+        self::assertEquals($expectedIdn, $domain->getTld() ? $domain->getTld() : null);
     }
 
     public static function providerForGetTld(): array
     {
         return [
-            ['com', [], TldRetrievalMode::MIX(), ''],
-            ['рф', [], TldRetrievalMode::MIX(), ''],
+            ['com', [], TldRetrievalMode::MIX(), 'com'],
+            ['рф', [], TldRetrievalMode::MIX(), 'рф'],
             ['example.com', [], TldRetrievalMode::MIX(), 'com'],
             ['пример.рф', [], TldRetrievalMode::MIX(), 'рф'],
             ['sub.example.com', [], TldRetrievalMode::MIX(), 'com'],
             ['суб.пример.рф', [], TldRetrievalMode::MIX(), 'рф'],
             ['edu.ru', [], TldRetrievalMode::MIX(), 'ru'],
             ['example.edu.ru', [], TldRetrievalMode::MIX(), 'ru'],
+            ['example.edu.ru.', [], TldRetrievalMode::MIX(), 'ru'],
             ['sub.example.edu.ru', [], TldRetrievalMode::MIX(), 'ru'],
             ['example.edu.ru.edu.ru', [], TldRetrievalMode::MIX(), 'ru'],
             ['мск.рф', [], TldRetrievalMode::MIX(), 'рф'],
@@ -259,17 +297,18 @@ class DomainTest extends TestCase
             ['com.com', [], TldRetrievalMode::MIX(), 'com'],
             ['com.com.com', [], TldRetrievalMode::MIX(), 'com'],
 
-            ['com', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), ''],
-            ['рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), ''],
+            ['com', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'com'],
+            ['рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'рф'],
             ['example.com', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'com'],
             ['пример.рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'рф'],
             ['sub.example.com', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'com'],
             ['суб.пример.рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'рф'],
-            ['edu.ru', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'ru'],
+            ['edu.ru', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'edu.ru'],
             ['example.edu.ru', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'edu.ru'],
+            ['example.edu.ru.', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'edu.ru'],
             ['sub.example.edu.ru', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'edu.ru'],
             ['example.edu.ru.edu.ru', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'edu.ru'],
-            ['мск.рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'рф'],
+            ['мск.рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'мск.рф'],
             ['пример.мск.рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'мск.рф'],
             ['суб.пример.мск.рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'мск.рф'],
             ['пример.мск.рф.мск.рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'мск.рф'],
@@ -283,14 +322,14 @@ class DomainTest extends TestCase
             ['example.edu.ru', ['ru', 'edu.ru'], TldRetrievalMode::MIX(), 'edu.ru'],
             ['example.edu.ru', ['ru', 'edu.ru'], TldRetrievalMode::TRUE(), 'ru'],
             ['example.edu.ru', ['ru', 'edu.ru'], TldRetrievalMode::CUSTOM(), 'edu.ru'],
-            ['edu.ru', ['ru', 'edu.ru'], TldRetrievalMode::CUSTOM(), 'ru'],
+            ['edu.ru', ['ru', 'edu.ru'], TldRetrievalMode::CUSTOM(), 'edu.ru'],
         ];
     }
 
     /**
      * @dataProvider providerForGetTld
      */
-    public function testGetTldWithMode(string $domain, array $customTlds, TldRetrievalMode $mode, string $expectedIdn): void
+    public function testGetTldWithMode(string $domain, array $customTlds, TldRetrievalMode $mode, ?string $expectedIdn): void
     {
         Domain::setCustomTlds(static function () use ($customTlds) {
             return $customTlds;
@@ -298,13 +337,23 @@ class DomainTest extends TestCase
 
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->getTld($mode) !== null ? $domain->getTld($mode)->asIdn() : '');
+        self::assertEquals($expectedIdn, $domain->getTld($mode));
+    }
+
+    /**
+     * @dataProvider rootDomainProvider
+     */
+    public function testGetTldOfRootDomain(string $rootDomain): void
+    {
+        $this->expectException(RootDomainException::class);
+        $domain = new Domain($rootDomain);
+        $domain->getTld();
     }
 
     /**
      * @dataProvider providerForGetWithoutTld
      */
-    public function testGetWithoutTld(string $domain, array $customTlds, TldRetrievalMode $mode, string $expectedIdn): void
+    public function testGetWithoutTld(string $domain, array $customTlds, TldRetrievalMode $mode, ?string $expectedIdn): void
     {
         Domain::setDefaultTldRetrievalMode($mode);
 
@@ -314,20 +363,21 @@ class DomainTest extends TestCase
 
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->getWithoutTld() !== null ? $domain->getWithoutTld()->asIdn() : '');
+        self::assertEquals($expectedIdn, $domain->getWithoutTld());
     }
 
     public static function providerForGetWithoutTld(): array
     {
         return [
-            ['com', [], TldRetrievalMode::MIX(), 'com'],
-            ['рф', [], TldRetrievalMode::MIX(), 'рф'],
+            ['com', [], TldRetrievalMode::MIX(), null],
+            ['рф', [], TldRetrievalMode::MIX(), null],
             ['example.com', [], TldRetrievalMode::MIX(), 'example'],
             ['пример.рф', [], TldRetrievalMode::MIX(), 'пример'],
             ['sub.example.com', [], TldRetrievalMode::MIX(), 'sub.example'],
             ['суб.пример.рф', [], TldRetrievalMode::MIX(), 'суб.пример'],
             ['edu.ru', [], TldRetrievalMode::MIX(), 'edu'],
             ['example.edu.ru', [], TldRetrievalMode::MIX(), 'example.edu'],
+            ['example.edu.ru.', [], TldRetrievalMode::MIX(), 'example.edu'],
             ['sub.example.edu.ru', [], TldRetrievalMode::MIX(), 'sub.example.edu'],
             ['example.edu.ru.edu.ru', [], TldRetrievalMode::MIX(), 'example.edu.ru.edu'],
             ['мск.рф', [], TldRetrievalMode::MIX(), 'мск'],
@@ -338,17 +388,18 @@ class DomainTest extends TestCase
             ['com.com', [], TldRetrievalMode::MIX(), 'com'],
             ['com.com.com', [], TldRetrievalMode::MIX(), 'com.com'],
 
-            ['com', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'com'],
-            ['рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'рф'],
+            ['com', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), null],
+            ['рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), null],
             ['example.com', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'example'],
             ['пример.рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'пример'],
             ['sub.example.com', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'sub.example'],
             ['суб.пример.рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'суб.пример'],
-            ['edu.ru', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'edu'],
+            ['edu.ru', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), null],
             ['example.edu.ru', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'example'],
+            ['example.edu.ru.', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'example'],
             ['sub.example.edu.ru', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'sub.example'],
             ['example.edu.ru.edu.ru', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'example.edu.ru'],
-            ['мск.рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'мск'],
+            ['мск.рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), null],
             ['пример.мск.рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'пример'],
             ['суб.пример.мск.рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'суб.пример'],
             ['пример.мск.рф.мск.рф', ['edu.ru', 'мск.рф'], TldRetrievalMode::MIX(), 'пример.мск.рф'],
@@ -362,14 +413,14 @@ class DomainTest extends TestCase
             ['example.edu.ru', ['ru', 'edu.ru'], TldRetrievalMode::MIX(), 'example'],
             ['example.edu.ru', ['ru', 'edu.ru'], TldRetrievalMode::TRUE(), 'example.edu'],
             ['example.edu.ru', ['ru', 'edu.ru'], TldRetrievalMode::CUSTOM(), 'example'],
-            ['edu.ru', ['ru', 'edu.ru'], TldRetrievalMode::CUSTOM(), 'edu'],
+            ['edu.ru', ['ru', 'edu.ru'], TldRetrievalMode::CUSTOM(), null],
         ];
     }
 
     /**
      * @dataProvider providerForGetWithoutTld
      */
-    public function testGetWithoutTldWithMode(string $domain, array $customTlds, TldRetrievalMode $mode, string $expectedIdn): void
+    public function testGetWithoutTldWithMode(string $domain, array $customTlds, TldRetrievalMode $mode, ?string $expectedIdn): void
     {
         Domain::setCustomTlds(static function () use ($customTlds) {
             return $customTlds;
@@ -377,7 +428,17 @@ class DomainTest extends TestCase
 
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->getWithoutTld($mode) !== null ? $domain->getWithoutTld($mode)->asIdn() : '');
+        self::assertEquals($expectedIdn, $domain->getWithoutTld($mode));
+    }
+
+    /**
+     * @dataProvider rootDomainProvider
+     */
+    public function testGetWithoutTldOfRootDomain(string $rootDomain): void
+    {
+        $this->expectException(RootDomainException::class);
+        $domain = new Domain($rootDomain);
+        $domain->getWithoutTld();
     }
 
     /**
@@ -392,10 +453,10 @@ class DomainTest extends TestCase
     public static function providerForInvalidDomain(): array
     {
         return [
-            [''],
             ['  '],
+            ['example.com '],
+            [' example.com'],
             ['.com'],
-            ['.'],
             ['ab--c'],
             ['аб--в'],
             ['com..'],
@@ -441,16 +502,16 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForGetLabelPositive
+     * @dataProvider providerForGetLabel
      */
-    public function testGetLabelPositive(string $domain, int $level, string $expectedLabel): void
+    public function testGetLabel(string $domain, int $level, string $expectedLabel): void
     {
         $domain = new Domain($domain);
 
         self::assertEquals($expectedLabel, $domain->getLabel($level));
     }
 
-    public static function providerForGetLabelPositive(): array
+    public static function providerForGetLabel(): array
     {
         return [
             ['sub.domain.com', 1, 'com'],
@@ -481,16 +542,16 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForSliceToLevelPositive
+     * @dataProvider providerForSliceToLevel
      */
-    public function testSliceToLevelPositive(string $domain, int $level, string $expectedIdn): void
+    public function testSliceToLevel(string $domain, int $level, string $expectedIdn): void
     {
         $domain = new Domain($domain);
 
         self::assertEquals($expectedIdn, $domain->sliceToLevel($level));
     }
 
-    public static function providerForSliceToLevelPositive(): array
+    public static function providerForSliceToLevel(): array
     {
         return [
             ['sub.domain.com', 1, 'com'],
@@ -517,6 +578,110 @@ class DomainTest extends TestCase
             ['sub.domain.com', -1, 'com'],
             ['sub.domain.com', 0, 'com'],
             ['sub.domain.com', 4, 'domain'],
+        ];
+    }
+
+    /**
+     * @dataProvider providerForGetAbsoluteAndGetFqdn
+     */
+    public function testGetAbsoluteAndGetFqdn(string $domain, string $expectedIdn): void
+    {
+        $domain = new Domain($domain);
+
+        self::assertEquals($expectedIdn, $domain->getAbsolute());
+        self::assertEquals($expectedIdn, $domain->getFqdn());
+    }
+
+    public static function providerForGetAbsoluteAndGetFqdn(): array
+    {
+        return [
+            ['sub.example.com', 'sub.example.com.'],
+            ['sub.example.com.', 'sub.example.com.'],
+        ];
+    }
+
+    /**
+     * @dataProvider providerForIsAbsoluteAndIsFqdn
+     */
+    public function testIsAbsoluteAndIsFqdn(string $domain, bool $expected): void
+    {
+        $domain = new Domain($domain);
+
+        self::assertEquals($expected, $domain->isAbsolute());
+        self::assertEquals($expected, $domain->isFqdn());
+    }
+
+    public static function providerForIsAbsoluteAndIsFqdn(): array
+    {
+        return [
+            ['sub.example.com', false],
+            ['sub.example.com.', true],
+        ];
+    }
+
+    /**
+     * @dataProvider providerForGetRelative
+     */
+    public function testGetRelative(string $domain, string $expectedIdn): void
+    {
+        $domain = new Domain($domain);
+
+        self::assertEquals($expectedIdn, $domain->getRelative());
+    }
+
+    public static function providerForGetRelative(): array
+    {
+        return [
+            ['sub.example.com', 'sub.example.com'],
+            ['sub.example.com.', 'sub.example.com'],
+        ];
+    }
+
+    /**
+     * @dataProvider providerForIsRoot
+     */
+    public function testIsRoot(string $domain, bool $expected): void
+    {
+        $domain = new Domain($domain);
+
+        self::assertEquals($expected, $domain->isRoot());
+    }
+
+    public static function providerForIsRoot(): array
+    {
+        return [
+            ['example.com', false],
+            ['com', false],
+            ['', true],
+            ['.', true],
+        ];
+    }
+
+    /**
+     * @dataProvider providerForGetClone
+     */
+    public function testGetClone(string $domain, string $expectedIdn): void
+    {
+        $domain = new Domain($domain);
+
+        self::assertEquals($expectedIdn, $domain->getClone());
+    }
+
+    public static function providerForGetClone(): array
+    {
+        return [
+            ['example.com', 'example.com'],
+            ['com', 'com'],
+            ['', ''],
+            ['.', '.'],
+        ];
+    }
+
+    public static function rootDomainProvider(): array
+    {
+        return [
+            [''],
+            ['.'],
         ];
     }
 }

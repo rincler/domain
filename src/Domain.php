@@ -17,6 +17,11 @@ class Domain
     private $punycode;
 
     /**
+     * @var bool
+     */
+    private $isAbsolute = false;
+
+    /**
      * @var TldRetrievalMode|null
      */
     private static $defaultTldRetrievalMode = null;
@@ -31,10 +36,10 @@ class Domain
      */
     private static $customTlds = null;
 
-    public static function isValid(string $domain): bool
+    public static function isValid(string $domainRaw): bool
     {
         try {
-            new static($domain);
+            new static($domainRaw);
 
             return true;
         } catch (InvalidDomainException $e) {
@@ -42,58 +47,63 @@ class Domain
         }
     }
 
-    final public function __construct(string $domain)
+    final public function __construct(string $domainRaw)
     {
-        $domain = trim($domain);
-
-        if ($domain === '') {
-            throw new InvalidDomainException(0, 'Empty domain.');
+        if (mb_substr($domainRaw, -1) === '.' && mb_substr($domainRaw, -2) !== '..') {
+            $this->isAbsolute = true;
+            $relativeDomainRaw = mb_substr($domainRaw, 0, -1);
+        } else {
+            $relativeDomainRaw = $domainRaw;
         }
 
-        $idn = \idn_to_utf8($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
+        if ($relativeDomainRaw === '') {
+            $this->idn = '';
+            $this->punycode = '';
+            return;
+        }
+
+        $idn = \idn_to_utf8($relativeDomainRaw, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
 
         if ($idn === false) {
             throw new InvalidDomainException(
                 $idnInfo['errors'],
-                sprintf('Domain "%s" is not valid. Idn error bitset: %d', $domain, $idnInfo['errors'])
+                sprintf('Domain "%s" is not valid. Idn error bitset: %d', $relativeDomainRaw, $idnInfo['errors'])
             );
         }
 
-        $punycode = \idn_to_ascii($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
+        $punycode = \idn_to_ascii($relativeDomainRaw, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
 
         if ($punycode === false) {
             throw new InvalidDomainException(
                 $idnInfo['errors'],
-                sprintf('Domain "%s" is not valid. Idn error bitset: %d.', $domain, $idnInfo['errors'])
+                sprintf('Domain "%s" is not valid. Idn error bitset: %d.', $relativeDomainRaw, $idnInfo['errors'])
             );
         }
 
         if (!\filter_var($punycode, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
             throw new InvalidDomainException(
                 0,
-                sprintf('Domain "%s" is not valid. Invalid characters.', $domain)
+                sprintf('Domain "%s" is not valid. Invalid characters.', $domainRaw)
             );
         }
 
         $this->idn = $idn;
         $this->punycode = $punycode;
-
-        $this->normalize();
     }
 
     public function asIdn(): string
     {
-        return $this->idn;
+        return $this->preservingAbsoluteness($this->idn);
     }
 
     public function asPunycode(): string
     {
-        return $this->punycode;
+        return $this->preservingAbsoluteness($this->punycode);
     }
 
     public function equals(self $domain): bool
     {
-        return $this->asIdn() === $domain->asIdn();
+        return $this->getRelative()->asIdn() === $domain->getRelative()->asIdn();
     }
 
     public function getLevel(): int
@@ -101,40 +111,50 @@ class Domain
         return count($this->getLabels());
     }
 
-    public function getZone(): ?self
+    public function getZone(): self
     {
+        if ($this->isRoot()) {
+            throw new RootDomainException('Cannot determine zone for the root domain.');
+        }
+
         if ($this->getLevel() === 1) {
-            return null;
+            return new Domain('');
         }
 
         $dotPosition = mb_strpos($this->asIdn(), '.');
-        $zone = mb_substr($this->asIdn(), $dotPosition + 1);
+        $zoneRaw = mb_substr($this->asIdn(), $dotPosition + 1);
 
-        return new static($zone);
+        return new static($zoneRaw);
     }
 
-    public function getWithoutZone(): ?self
+    public function getWithoutZone(): self
     {
-        if ($this->getZone() === null) {
-            return new static($this->asIdn());
+        if ($this->isRoot()) {
+            throw new RootDomainException('Cannot determine zone for the root domain.');
         }
 
-        $domainWithoutZone = preg_replace("/\.{$this->getZone()->asIdn()}$/u", '', $this->asIdn());
+        if ($this->getLevel() === 1) {
+            return $this->getRelative();
+        }
 
-        return new static($domainWithoutZone);
+        $domainWithoutZoneRaw = preg_replace("/\.{$this->getZone()->asIdn()}$/u", '', $this->asIdn());
+
+        return new static($domainWithoutZoneRaw);
     }
 
     public function getTld(?TldRetrievalMode $mode = null): ?self
     {
-        $mode = $mode ?? static::getDefaultTldRetrievalMode();
-
-        if ($this->getLevel() === 1) {
-            return null;
+        if ($this->isRoot()) {
+            throw new RootDomainException('Cannot determine TLD for the root domain.');
         }
+
+        $domain = $this->getRelative();
+
+        $mode = $mode ?? static::getDefaultTldRetrievalMode();
 
         if (!$mode->equals(TldRetrievalMode::TRUE())) {
             foreach (static::getCustomTlds() as $customTld) {
-                if (preg_match("/\.$customTld$/u", $this->asIdn())) {
+                if ($domain->equals($customTld) || preg_match("/\.$customTld$/u", $domain->asIdn())) {
                     return $customTld;
                 }
             }
@@ -144,23 +164,38 @@ class Domain
             return null;
         }
 
-        $dotPosition = mb_strrpos($this->asIdn(), '.');
-        $tld = mb_substr($this->asIdn(), $dotPosition + 1);
+        if ($domain->getLevel() === 1) {
+            return $domain;
+        }
 
-        return new static($tld);
+        $dotPosition = mb_strrpos($domain->asIdn(), '.');
+        $tldRaw = mb_substr($domain->asIdn(), $dotPosition + 1);
+
+        return new static($tldRaw);
     }
 
     public function getWithoutTld(?TldRetrievalMode $mode = null): ?self
     {
-        $mode = $mode ?? static::getDefaultTldRetrievalMode();
-
-        if ($this->getTld($mode) === null) {
-            return new static($this->asIdn());
+        if ($this->isRoot()) {
+            throw new RootDomainException('Cannot determine TLD for the root domain.');
         }
 
-        $domainWithoutTld = preg_replace("/\.{$this->getTld($mode)->asIdn()}$/u", '', $this->asIdn());
+        $domain = $this->getRelative();
+        $tld = $domain->getTld($mode);
 
-        return new static($domainWithoutTld);
+        if ($tld === null) {
+            return $domain;
+        }
+
+        $mode = $mode ?? static::getDefaultTldRetrievalMode();
+
+        if ($domain->equals($tld)) {
+            return null;
+        }
+
+        $domainWithoutTldRaw = preg_replace("/\.{$domain->getTld($mode)->asIdn()}$/u", '', $domain->asIdn());
+
+        return new static($domainWithoutTldRaw);
     }
 
     /**
@@ -168,11 +203,13 @@ class Domain
      */
     public function getLabels(): array
     {
-        $labels = array_reverse(explode('.', $this->asIdn()));
+        $domain = $this->getRelative();
 
-        return array_map(static function (string $label) {
-            return new static($label);
-        }, $labels);
+        $labelsRaw = array_reverse(explode('.', $domain->asIdn()));
+
+        return array_map(static function (string $labelRaw) {
+            return new static($labelRaw);
+        }, $labelsRaw);
     }
 
     public function getLabel(int $level): self
@@ -200,9 +237,49 @@ class Domain
         return new static(implode('.', array_reverse($slice)));
     }
 
+    public function getAbsolute(): self
+    {
+        return new static($this->idn . '.');
+    }
+
+    public function isAbsolute(): bool
+    {
+        return $this->isAbsolute;
+    }
+
+    public function getFqdn(): self
+    {
+        return $this->getAbsolute();
+    }
+
+    public function isFqdn(): bool
+    {
+        return $this->isAbsolute();
+    }
+
+    public function getRelative(): self
+    {
+        return new static($this->idn);
+    }
+
+    public function isRoot(): bool
+    {
+        return $this->idn === '';
+    }
+
+    public function getClone(): self
+    {
+        return new static($this->asIdn());
+    }
+
     public function __toString(): string
     {
-        return $this->idn;
+        return $this->asIdn();
+    }
+
+    protected function preservingAbsoluteness(string $domainRaw): string
+    {
+        return $this->isAbsolute() ? $domainRaw . '.' : $domainRaw;
     }
 
     public static function setDefaultTldRetrievalMode(TldRetrievalMode $mode): void
@@ -257,26 +334,5 @@ class Domain
         });
 
         return self::$customTlds;
-    }
-
-    private function normalize(): void
-    {
-        $this->removeDotAtTheEnd();
-        $this->toLowerCase();
-    }
-
-    private function removeDotAtTheEnd(): void
-    {
-        $lastCharacter = mb_substr($this->asIdn(), -1);
-        if ($lastCharacter === '.') {
-            $this->idn = mb_substr($this->asIdn(), 0, -1);
-            $this->punycode = mb_substr($this->asPunycode(), 0, -1);
-        }
-    }
-
-    private function toLowerCase(): void
-    {
-        $this->idn = mb_strtolower($this->asIdn());
-        $this->punycode = mb_strtolower($this->asPunycode());
     }
 }

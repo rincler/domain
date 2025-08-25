@@ -4,7 +4,7 @@
 ![PHP Version](https://img.shields.io/packagist/php-v/rincler/domain)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/rincler/domain/ci.yml?branch=master)
 
-A domain name value object that supports IDN and Punycode, validates input, and provides easy access to the domain level, zone and TLD.
+A domain name value object that supports IDN and Punycode, FQDNs, validates input, and provides easy access to the domain level, zone and TLD.
 
 ## Usage
 
@@ -25,6 +25,7 @@ echo $domain->getLevel(); // 3
 echo $domain->getLabels(); // [new Domain('com'), new Domain('example'), new Domain('sub')]
 echo $domain->getLabel(2); // example
 echo $domain->sliceToLevel(2); // example.com
+echo $domain->getAbsolute(); // sub.example.com.
 
 $domain = new Domain('пример.рф');
 echo $domain->asIdn(); // пример.рф
@@ -42,6 +43,12 @@ var_dump(Domain::isValid('example.com')) // true
 var_dump(Domain::isValid('пример.рф')) // true
 var_dump(Domain::isValid('exam_ple.com')) // false
 var_dump(Domain::isValid('.example.com')) // false
+
+$domain = new Domain('sub.example.com.');
+var_dump($domain->isFqdn()) // true
+echo $domain // sub.example.com.
+echo $domain->getZone() // example.com.
+echo $domain->getRelative(); // sub.example.com
 ```
 
 ## Installation
@@ -65,6 +72,13 @@ var_dump(Domain::isValid('.example.com')) // false
 - `getLabels(): array` - Returns an array containing all labels of the domain.
 - `getLabel(int $level): array` - Returns the label corresponding to the given domain level.
 - `sliceToLevel(int $level): array` - Returns an array of domain labels up to the given level.
+- `getAbsolute(): Domain` - Returns an absolute domain with a dot at the end (FQDN).
+- `isAbsolute(): bool` - Returns `true` if the domain is absolute (FQDN with trailing dot), `false` otherwise.
+- `getFqdn(): Domain` - Alias for `getAbsolute()`.
+- `isFqdn(): bool` - Alias for `isAbsolute()`.
+- `getRelative(): Domain` - Returns an relative domain.
+- `isRoot(): bool` - Returns `true` if the domain is root, `false` otherwise.
+- `clone(): Domain` - Returns a copy of the domain.
 - `__toString(): string` - Magic method returning the domain equivalent to `asIdn()`.
 
 ### Custom TLDs
