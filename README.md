@@ -85,6 +85,11 @@ echo $domain->getRelative(); // sub.example.com
 - `getClone(): Domain` - Returns a copy of the domain.
 - `__toString(): string` - Magic method returning the domain equivalent to `asIdn()`.
 
+### URL Domain
+
+Domains used in URLs cannot be absolute (with a dot at the end) and do not have a root zone.
+In such cases, you can use the `UrlDomain` class instead of `Domain`.
+
 ### eTLD
 
 See [eTLD](https://developer.mozilla.org/en-US/docs/Glossary/eTLD) and [Public Suffix List](https://publicsuffix.org/).

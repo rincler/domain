@@ -18,7 +18,7 @@ class DomainTest extends TestCase
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, (string) $domain);
+        self::assertEquals($expectedIdn, $domain);
     }
 
     public static function providerForConstruct(): array

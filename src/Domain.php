@@ -31,6 +31,8 @@ class Domain
     */
     private static $eTLDs = null;
 
+    private const INVALID_DOMAIN_CHARACTERS = -101;
+
     public static function isValid(string $domainRaw): bool
     {
         try {
@@ -42,7 +44,7 @@ class Domain
         }
     }
 
-    final public function __construct(string $domainRaw)
+    public function __construct(string $domainRaw)
     {
         if (mb_substr($domainRaw, -1) === '.' && mb_substr($domainRaw, -2) !== '..') {
             $this->isAbsolute = true;
@@ -61,8 +63,8 @@ class Domain
 
         if ($idn === false) {
             throw new InvalidDomainException(
+                sprintf('Domain "%s" is not valid. Idn error bitset: %d', $relativeDomainRaw, $idnInfo['errors']),
                 $idnInfo['errors'],
-                sprintf('Domain "%s" is not valid. Idn error bitset: %d', $relativeDomainRaw, $idnInfo['errors'])
             );
         }
 
@@ -70,15 +72,15 @@ class Domain
 
         if ($punycode === false) {
             throw new InvalidDomainException(
+                sprintf('Domain "%s" is not valid. Idn error bitset: %d.', $relativeDomainRaw, $idnInfo['errors']),
                 $idnInfo['errors'],
-                sprintf('Domain "%s" is not valid. Idn error bitset: %d.', $relativeDomainRaw, $idnInfo['errors'])
             );
         }
 
         if (!\filter_var($punycode, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
             throw new InvalidDomainException(
-                0,
-                sprintf('Domain "%s" is not valid. Invalid characters.', $domainRaw)
+                sprintf('Domain "%s" is not valid. Invalid characters.', $domainRaw),
+                self::INVALID_DOMAIN_CHARACTERS,
             );
         }
 
@@ -109,7 +111,7 @@ class Domain
     public function getZone(): self
     {
         if ($this->isRoot()) {
-            throw new RootDomainException('Cannot determine zone for the root domain.');
+            throw new RootDomainException('Root domain has no zone.');
         }
 
         if ($this->getLevel() === 1) {
@@ -124,15 +126,13 @@ class Domain
 
     public function getWithoutZone(): self
     {
-        if ($this->isRoot()) {
-            throw new RootDomainException('Cannot determine zone for the root domain.');
-        }
+        $zone = $this->getZone();
 
         if ($this->getLevel() === 1) {
             return $this->getRelative();
         }
 
-        $domainWithoutZoneRaw = preg_replace("/\.{$this->getZone()->asIdn()}$/u", '', $this->asIdn());
+        $domainWithoutZoneRaw = preg_replace("/\.{$zone->asIdn()}$/u", '', $this->asIdn());
 
         return new static($domainWithoutZoneRaw);
     }
@@ -140,7 +140,7 @@ class Domain
     public function getTld(): self
     {
         if ($this->isRoot()) {
-            throw new RootDomainException('Cannot determine TLD for the root domain.');
+            throw new RootDomainException('Root domain has no TLD.');
         }
 
         $domain = $this->getRelative();
@@ -157,10 +157,6 @@ class Domain
 
     public function getWithoutTld(): ?self
     {
-        if ($this->isRoot()) {
-            throw new RootDomainException('Cannot determine TLD for the root domain.');
-        }
-
         $domain = $this->getRelative();
         $tld = $domain->getTld();
 
@@ -176,7 +172,7 @@ class Domain
     public function getETld(): ?self
     {
         if ($this->isRoot()) {
-            throw new RootDomainException('Cannot determine eTLD for the root domain.');
+            throw new RootDomainException('Root domain has no eTLD.');
         }
 
         $domain = $this->getRelative();
@@ -192,10 +188,6 @@ class Domain
 
     public function getWithoutETld(): ?self
     {
-        if ($this->isRoot()) {
-            throw new RootDomainException('Cannot determine eTLD for the root domain.');
-        }
-
         $domain = $this->getRelative();
         $eTld = $domain->getETld();
 
@@ -215,7 +207,7 @@ class Domain
     public function getETldPlusOne(): ?self
     {
         if ($this->isRoot()) {
-            throw new RootDomainException('Cannot determine eTLD+1 for the root domain.');
+            throw new RootDomainException('Root domain has no eTLD+1.');
         }
 
         $domain = $this->getRelative();
@@ -238,10 +230,6 @@ class Domain
 
     public function getWithoutEtldPlusOne(): ?self
     {
-        if ($this->isRoot()) {
-            throw new RootDomainException('Cannot determine eTLD+1 for the root domain.');
-        }
-
         $domain = $this->getRelative();
         $eTldPlusOne = $domain->getETldPlusOne();
 
