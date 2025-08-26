@@ -4,7 +4,7 @@
 ![PHP Version](https://img.shields.io/packagist/php-v/rincler/domain)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/rincler/domain/ci.yml?branch=master)
 
-A domain name value object that supports IDN and Punycode, FQDNs, validates input, and provides easy access to the domain level, zone and TLD.
+A domain name value object that supports IDN and Punycode, FQDNs, validates input, and provides easy access to the domain level, labels, zone, TLD, eTLD and eTLD+1.
 
 ## Usage
 
@@ -67,8 +67,12 @@ echo $domain->getRelative(); // sub.example.com
 - `getLevel(): int` - Returns the number of levels in the domain.
 - `getZone(): Domain` - Returns the domain zone.
 - `getWithoutZone(): Domain` - Returns the domain without its zone.
-- `getTld(?TldRetrievalMode $mode = null): Domain` - Returns the domain’s top-level domain.
-- `getWithoutTld(?TldRetrievalMode $mode = null): Domain` - Returns the domain excluding the top-level domain.
+- `getTld(): Domain` - Returns the domain’s top-level domain (TLD).
+- `getWithoutTld(): Domain` - Returns the domain excluding the TLD.
+- `getETld(): Domain` - Returns the domain’s effective top-level domain (eTLD).
+- `getWithoutETld(): Domain` - Returns the domain excluding the eTLD.
+- `getETldPlusOne(): Domain` - Returns the domain’s effective top-level domain plus the next part (eTLD+1).
+- `getWithoutETldPlusOne(): Domain` - Returns the domain excluding the eTLD+1.
 - `getLabels(): array` - Returns an array containing all labels of the domain.
 - `getLabel(int $level): array` - Returns the label corresponding to the given domain level.
 - `sliceToLevel(int $level): array` - Returns an array of domain labels up to the given level.
@@ -78,76 +82,28 @@ echo $domain->getRelative(); // sub.example.com
 - `isFqdn(): bool` - Alias for `isAbsolute()`.
 - `getRelative(): Domain` - Returns an relative domain.
 - `isRoot(): bool` - Returns `true` if the domain is root, `false` otherwise.
-- `clone(): Domain` - Returns a copy of the domain.
+- `getClone(): Domain` - Returns a copy of the domain.
 - `__toString(): string` - Magic method returning the domain equivalent to `asIdn()`.
 
-### Custom TLDs
+### eTLD
 
-You can define custom TLDs, e.g., `net.ru` or `org.ru`, using the `setCustomTlds` method:
+See [eTLD](https://developer.mozilla.org/en-US/docs/Glossary/eTLD) and [Public Suffix List](https://publicsuffix.org/).
 
-```php
-<?php
-
-use \Rincler\Domain\Domain;
-
-$domain = new Domain('example.net.ru');
-
-echo $domain->getTld(); // ru
-
-Domain::setCustomTlds(static function () {
-    return ['net.ru', 'org.ru'];
-});
-
-echo $domain->getTld(); // net.ru
-```
-
-You can specify the TLD retriever mode:
-
-- `TldRetrievalMode::TRUE()` - Retrieves only true TLDs.
-- `TldRetrievalMode::CUSTOM()` - Retrieves only custom TLDs.
-- `TldRetrievalMode::MIX()` - Retrieves custom TLDs, and if a custom TLD is not found, falls back to true TLDs (this is the default mode).
+To use eTLDs, you must specify an eTLD provider via the `setETldProvider` method:
 
 ```php
 <?php
 
 use \Rincler\Domain\Domain;
-use \Rincler\Domain\TldRetrievalMode
 
-$domain = new Domain('example.net.ru');
-
-Domain::setCustomTlds(static function () {
+Domain::setETldProvider(static function () {
     return ['net.ru', 'org.ru'];
 });
 
-echo $domain->getTld(TldRetrievalMode::TRUE()); // ru
-echo $domain->getTld(TldRetrievalMode::CUSTOM()); // net.ru
-echo $domain->getTld(TldRetrievalMode::MIX()); // net.ru
+$domain = new Domain('sub.example.net.ru');
 
-$domain = new Domain('example.ru');
-echo $domain->getTld(TldRetrievalMode::TRUE()); // ru
-echo $domain->getTld(TldRetrievalMode::CUSTOM()); // <null>
-echo $domain->getTld(TldRetrievalMode::MIX()); // ru
-```
-
-You can also set the TLD retrieval mode globally:
-
-```php
-<?php
-
-use \Rincler\Domain\Domain;
-use \Rincler\Domain\TldRetrievalMode
-
-$domain = new Domain('example.net.ru');
-
-Domain::setDefaultTldRetrievalMode(TldRetrievalMode::TRUE());
-
-Domain::setCustomTlds(static function () {
-    return ['net.ru', 'org.ru'];
-});
-
-echo $domain->getTld(); // ru
-// You can still pass the mode as an argument:
-echo $domain->getTld(TldRetrievalMode::CUSTOM()); // net.ru
+echo $domain->getETld(); // net.ru
+echo $domain->getETldPlusOne(); // example.net.ru
 ```
 
 ## Why PHP >= 7.3?

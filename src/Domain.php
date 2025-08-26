@@ -22,19 +22,14 @@ class Domain
     private $isAbsolute = false;
 
     /**
-     * @var TldRetrievalMode|null
-     */
-    private static $defaultTldRetrievalMode = null;
-
-    /**
      * @var callable|null
      */
-    private static $customTldsExtractor = null;
+    private static $eTLDProvider = null;
 
     /**
      * @var static[]|null
-     */
-    private static $customTlds = null;
+    */
+    private static $eTLDs = null;
 
     public static function isValid(string $domainRaw): bool
     {
@@ -142,27 +137,13 @@ class Domain
         return new static($domainWithoutZoneRaw);
     }
 
-    public function getTld(?TldRetrievalMode $mode = null): ?self
+    public function getTld(): self
     {
         if ($this->isRoot()) {
             throw new RootDomainException('Cannot determine TLD for the root domain.');
         }
 
         $domain = $this->getRelative();
-
-        $mode = $mode ?? static::getDefaultTldRetrievalMode();
-
-        if (!$mode->equals(TldRetrievalMode::TRUE())) {
-            foreach (static::getCustomTlds() as $customTld) {
-                if ($domain->equals($customTld) || preg_match("/\.$customTld$/u", $domain->asIdn())) {
-                    return $customTld;
-                }
-            }
-        }
-
-        if ($mode->equals(TldRetrievalMode::CUSTOM())) {
-            return null;
-        }
 
         if ($domain->getLevel() === 1) {
             return $domain;
@@ -174,28 +155,107 @@ class Domain
         return new static($tldRaw);
     }
 
-    public function getWithoutTld(?TldRetrievalMode $mode = null): ?self
+    public function getWithoutTld(): ?self
     {
         if ($this->isRoot()) {
             throw new RootDomainException('Cannot determine TLD for the root domain.');
         }
 
         $domain = $this->getRelative();
-        $tld = $domain->getTld($mode);
-
-        if ($tld === null) {
-            return $domain;
-        }
-
-        $mode = $mode ?? static::getDefaultTldRetrievalMode();
+        $tld = $domain->getTld();
 
         if ($domain->equals($tld)) {
             return null;
         }
 
-        $domainWithoutTldRaw = preg_replace("/\.{$domain->getTld($mode)->asIdn()}$/u", '', $domain->asIdn());
+        $domainWithoutTldRaw = preg_replace("/\.{$tld->asIdn()}$/u", '', $domain->asIdn());
 
         return new static($domainWithoutTldRaw);
+    }
+
+    public function getETld(): ?self
+    {
+        if ($this->isRoot()) {
+            throw new RootDomainException('Cannot determine eTLD for the root domain.');
+        }
+
+        $domain = $this->getRelative();
+
+        foreach (static::getETlds() as $eTldItem) {
+            if ($domain->equals($eTldItem) || preg_match("/\.$eTldItem$/u", $domain->asIdn())) {
+                return $eTldItem;
+            }
+        }
+
+        return null;
+    }
+
+    public function getWithoutETld(): ?self
+    {
+        if ($this->isRoot()) {
+            throw new RootDomainException('Cannot determine eTLD for the root domain.');
+        }
+
+        $domain = $this->getRelative();
+        $eTld = $domain->getETld();
+
+        if ($eTld === null) {
+            return $domain;
+        }
+
+        if ($domain->equals($eTld)) {
+            return null;
+        }
+
+        $domainWithoutETldRaw = preg_replace("/\.{$eTld->asIdn()}$/u", '', $domain->asIdn());
+
+        return new static($domainWithoutETldRaw);
+    }
+
+    public function getETldPlusOne(): ?self
+    {
+        if ($this->isRoot()) {
+            throw new RootDomainException('Cannot determine eTLD+1 for the root domain.');
+        }
+
+        $domain = $this->getRelative();
+
+        $eTld = null;
+
+        foreach (static::getETlds() as $eTldItem) {
+            if ($domain->equals($eTldItem) || preg_match("/\.$eTldItem$/u", $domain->asIdn())) {
+                $eTld = $eTldItem;
+                break;
+            }
+        }
+
+        if ($eTld === null || $domain->getLevel() < $eTld->getLevel() + 1) {
+            return null;
+        }
+
+        return $domain->sliceToLevel($eTld->getLevel() + 1);
+    }
+
+    public function getWithoutEtldPlusOne(): ?self
+    {
+        if ($this->isRoot()) {
+            throw new RootDomainException('Cannot determine eTLD+1 for the root domain.');
+        }
+
+        $domain = $this->getRelative();
+        $eTldPlusOne = $domain->getETldPlusOne();
+
+        if ($eTldPlusOne === null) {
+            return $domain;
+        }
+
+        if ($domain->equals($eTldPlusOne)) {
+            return null;
+        }
+
+        $domainWithoutETldPlusOneRaw = preg_replace("/\.{$eTldPlusOne->asIdn()}$/u", '', $domain->asIdn());
+
+        return new static($domainWithoutETldPlusOneRaw);
     }
 
     /**
@@ -277,62 +337,50 @@ class Domain
         return $this->asIdn();
     }
 
-    protected function preservingAbsoluteness(string $domainRaw): string
-    {
-        return $this->isAbsolute() ? $domainRaw . '.' : $domainRaw;
-    }
-
-    public static function setDefaultTldRetrievalMode(TldRetrievalMode $mode): void
-    {
-        self::$defaultTldRetrievalMode = $mode;
-    }
-
-    protected static function getDefaultTldRetrievalMode(): TldRetrievalMode
-    {
-        return self::$defaultTldRetrievalMode ?? TldRetrievalMode::MIX();
-    }
-
     /**
-     * Defines custom TLDs.
-     *
-     * @param callable $extractor Callback, that returns an array of custom TLDs, e.g. `[net.ru, org.ru]`.
-     *                            The callback is called (on `getTld` and `getWithoutTld`) once and returned array is cached.
+     * @param callable $provider Callback, that returns an array of eTLDs, e.g. `[net.ru, org.ru]`.
+     *                            The callback is invoked once (on `getETld`, `getWithoutETld`, `getETldPlusOne` and `getWithoutETldPlusOne`), and its result is cached.
      */
-    public static function setCustomTlds(callable $extractor): void
+    public static function setETldProvider(callable $provider): void
     {
-        self::$customTldsExtractor = $extractor;
-        self::$customTlds = null;
+        self::$eTLDProvider = $provider;
+        self::$eTLDs = null;
     }
 
-    public static function unsetCustomTlds(): void
+    public static function unsetETlds(): void
     {
-        self::$customTldsExtractor = null;
-        self::$customTlds = null;
+        self::$eTLDProvider = null;
+        self::$eTLDs = null;
     }
 
     /**
      * @return static[]
      */
-    protected static function getCustomTlds(): array
+    protected static function getETlds(): array
     {
-        if (self::$customTldsExtractor === null) {
+        if (self::$eTLDProvider === null) {
             return [];
         }
 
-        if (self::$customTlds !== null) {
-            return self::$customTlds;
+        if (self::$eTLDs !== null) {
+            return self::$eTLDs;
         }
 
-        $customTlds = call_user_func(self::$customTldsExtractor);
+        $eTLDsRaw = call_user_func(self::$eTLDProvider);
 
-        self::$customTlds = array_map(static function (string $customTld) {
-            return new static($customTld);
-        }, $customTlds);
+        self::$eTLDs = array_map(static function (string $eTldRaw) {
+            return new static($eTldRaw);
+        }, $eTLDsRaw);
 
-        usort(self::$customTlds, function (self $tldA, self $tldB) {
+        usort(self::$eTLDs, function (self $tldA, self $tldB) {
             return $tldB->getLevel() <=> $tldA->getLevel();
         });
 
-        return self::$customTlds;
+        return self::$eTLDs;
+    }
+
+    protected function preservingAbsoluteness(string $domainRaw): string
+    {
+        return $this->isAbsolute() ? $domainRaw . '.' : $domainRaw;
     }
 }
