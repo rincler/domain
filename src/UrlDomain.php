@@ -28,12 +28,12 @@ class UrlDomain extends Domain
         }
     }
 
-    public function getZone(): Domain
+    public function zone(): Domain
     {
-        if ($this->getLevel() === 1) {
+        if ($this->level() === 1) {
             throw new UrlDomainException('A URL top-level domain has no zone.');
         }
 
-        return parent::getZone();
+        return parent::zone();
     }
 }

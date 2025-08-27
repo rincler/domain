@@ -4,7 +4,7 @@
 ![PHP Version](https://img.shields.io/packagist/php-v/rincler/domain)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/rincler/domain/ci.yml?branch=master)
 
-A domain name value object that supports IDN and Punycode, FQDNs, validates input, and provides easy access to the domain level, labels, zone, TLD, eTLD and eTLD+1.
+A domain name value object that supports IDN and Punycode, FQDN, validates input, and provides easy access to the domain level, labels, zone, TLD, eTLD and eTLD+1.
 
 ## Usage
 
@@ -15,24 +15,24 @@ use \Rincler\Domain\Domain;
 
 $domain = new Domain('sub.example.com');
 echo $domain; // sub.example.com
-echo $domain->asIdn(); // sub.example.com
+echo $domain->asIDN(); // sub.example.com
 echo $domain->asPunycode(); // sub.example.com
-echo $domain->getZone(); // example.com
-echo $domain->getWithout($domain->getZone()); // sub
-echo $domain->getTld(); // com
-echo $domain->getWithout($domain->getTld()); // sub.example
-echo $domain->getLevel(); // 3
-echo $domain->getLabels(); // [new Domain('com'), new Domain('example'), new Domain('sub')]
-echo $domain->getLabel(2); // example
+echo $domain->zone(); // example.com
+echo $domain->without($domain->zone()); // sub
+echo $domain->TLD(); // com
+echo $domain->without($domain->TLD()); // sub.example
+echo $domain->level(); // 3
+echo $domain->labels(); // [new Domain('com'), new Domain('example'), new Domain('sub')]
+echo $domain->label(2); // example
 echo $domain->sliceToLevel(2); // example.com
-echo $domain->getAbsolute(); // sub.example.com.
+echo $domain->absolute(); // sub.example.com.
 
 $domain = new Domain('пример.рф');
-echo $domain->asIdn(); // пример.рф
+echo $domain->asIDN(); // пример.рф
 echo $domain->asPunycode(); // xn--e1afmkfd.xn--p1ai
 
 $domain = new Domain('xn--e1afmkfd.xn--p1ai');
-echo $domain->asIdn(); // пример.рф
+echo $domain->asIDN(); // пример.рф
 echo $domain->asPunycode(); // xn--e1afmkfd.xn--p1ai
 
 var_dump($domain->equals(new Domain('xn--e1afmkfd.xn--p1ai'))) // true
@@ -45,42 +45,42 @@ var_dump(Domain::isValid('exam_ple.com')) // false
 var_dump(Domain::isValid('.example.com')) // false
 
 $domain = new Domain('sub.example.com.');
-var_dump($domain->isFqdn()) // true
+var_dump($domain->isFQDN()) // true
 echo $domain // sub.example.com.
-echo $domain->getZone() // example.com.
-echo $domain->getRelative(); // sub.example.com
+echo $domain->zone() // example.com.
+echo $domain->relative(); // sub.example.com
 ```
 
 ## Installation
 
 ```bash
-    composer require rincler/domain
+composer require rincler/domain
 ```
 
 ## Documentation
 
 - static `isValid(): bool` - Returns `true` if the domain is valid, `false` otherwise.
 - `__constructor(string $domain)` - The constructor validates the domain and throws `InvalidDomainException` if it is not valid, then creates the value object.
-- `asIdn(): string` - Returns the domain in IDN format.
+- `asIDN(): string` - Returns the domain in IDN format.
 - `asPunycode(): string` - Returns the domain in Punycode format.
 - `equals(Domain $domain): bool` - Returns `true` if the current domain equals the specified domain, `false` otherwise.
-- `getLevel(): int` - Returns the number of levels in the domain.
-- `getZone(): Domain` - Returns the domain zone.
-- `getTld(): Domain` - Returns the domain’s top-level domain (TLD).
-- `getETld(): Domain` - Returns the domain’s effective top-level domain (eTLD).
-- `getETldPlusOne(): Domain` - Returns the domain’s effective top-level domain plus the next label (eTLD+1).
-- `getWithout(Domain $suffix): Domain` - Returns the domain without the specified suffix.
-- `getLabels(): array` - Returns an array containing all labels of the domain.
-- `getLabel(int $level): array` - Returns the label corresponding to the given domain level.
-- `sliceToLevel(int $level): array` - Returns an array of domain labels up to the given level.
-- `getAbsolute(): Domain` - Returns an absolute domain with a dot at the end (FQDN).
-- `isAbsolute(): bool` - Returns `true` if the domain is absolute (FQDN with trailing dot), `false` otherwise.
-- `getFqdn(): Domain` - Alias for `getAbsolute()`.
-- `isFqdn(): bool` - Alias for `isAbsolute()`.
-- `getRelative(): Domain` - Returns an relative domain.
+- `level(): int` - Returns the number of levels in the domain.
+- `zone(): Domain` - Returns the domain zone.
+- `TLD(): Domain` - Returns the domain’s top-level domain (TLD).
+- `eTLD(): Domain` - Returns the domain’s effective top-level domain (eTLD).
+- `eTLDPlusOne(): Domain` - Returns the domain’s effective top-level domain plus the next label (eTLD+1).
+- `without(Domain $suffix): Domain` - Returns the domain without the specified suffix.
+- `labels(): Domain[]` - Returns an array containing all labels of the domain.
+- `label(int $level): Domain` - Returns the label corresponding to the given domain level.
+- `sliceToLevel(int $level): Domain` - Returns the domain up to the specified level.
+- `absolute(): Domain` - Returns the absolute form of the domain (FQDN) with a trailing dot.
+- `isAbsolute(): bool` - Returns `true` if the domain is absolute (FQDN), `false` otherwise.
+- `FQDN(): Domain` - Alias for `absolute()`.
+- `isFQDN(): bool` - Alias for `isAbsolute()`.
+- `relative(): Domain` - Returns the relative form of the domain.
 - `isRoot(): bool` - Returns `true` if the domain is root, `false` otherwise.
-- `getClone(): Domain` - Returns a copy of the domain.
-- `__toString(): string` - Magic method returning the domain equivalent to `asIdn()`.
+- `clone(): Domain` - Returns a copy of the domain.
+- `__toString(): string` - Magic method returning the domain equivalent to `asIDN()`.
 
 ### URL Domain
 
@@ -91,21 +91,21 @@ In such cases, you can use the `UrlDomain` class instead of `Domain`.
 
 See [eTLD](https://developer.mozilla.org/en-US/docs/Glossary/eTLD) and [Public Suffix List](https://publicsuffix.org/).
 
-To use eTLDs, you must specify an eTLD provider via the `setETldProvider` method:
+To use eTLDs, you must specify an eTLD provider via the `eTLDSetProvider` method:
 
 ```php
 <?php
 
 use \Rincler\Domain\Domain;
 
-Domain::setETldProvider(static function () {
+Domain::eTLDSetProvider(static function () {
     return ['net.ru', 'org.ru'];
 });
 
 $domain = new Domain('sub.example.net.ru');
 
-echo $domain->getETld(); // net.ru
-echo $domain->getETldPlusOne(); // example.net.ru
+echo $domain->eTLD(); // net.ru
+echo $domain->eTLDPlusOne(); // example.net.ru
 ```
 
 ## Why PHP >= 7.3?

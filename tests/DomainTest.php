@@ -14,11 +14,11 @@ class DomainTest extends TestCase
     /**
      * @dataProvider providerForConstruct
      */
-    public function testConstruct(string $domain, string $expectedIdn): void
+    public function testConstruct(string $domain, string $expectedIDN): void
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain);
+        self::assertEquals($expectedIDN, $domain);
     }
 
     public static function providerForConstruct(): array
@@ -35,26 +35,26 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForAsIdnAndAsPunycode
+     * @dataProvider providerForAsIDNAndAsPunycode
      */
-    public function testAsIdn(string $domain, string $expectedIdn, string $expectedPunycode): void
+    public function testAsIDN(string $domain, string $expectedIDN, string $expectedPunycode): void
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->asIdn());
+        self::assertEquals($expectedIDN, $domain->asIDN());
     }
 
     /**
-     * @dataProvider providerForAsIdnAndAsPunycode
+     * @dataProvider providerForAsIDNAndAsPunycode
      */
-    public function testAsPunycode(string $domain, string $expectedIdn, string $expectedPunycode): void
+    public function testAsPunycode(string $domain, string $expectedIDN, string $expectedPunycode): void
     {
         $domain = new Domain($domain);
 
         self::assertEquals($expectedPunycode, $domain->asPunycode());
     }
 
-    public static function providerForAsIdnAndAsPunycode(): array
+    public static function providerForAsIDNAndAsPunycode(): array
     {
         return [
             ['com', 'com', 'com'],
@@ -106,16 +106,16 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForGetLevel
+     * @dataProvider providerForLevel
      */
-    public function testGetLevel(string $domain, int $expectedLevel): void
+    public function testLevel(string $domain, int $expectedLevel): void
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedLevel, $domain->getLevel());
+        self::assertEquals($expectedLevel, $domain->level());
     }
 
-    public static function providerForGetLevel(): array
+    public static function providerForLevel(): array
     {
         return [
             ['ru', 1],
@@ -169,16 +169,16 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForGetZone
+     * @dataProvider providerForZone
      */
-    public function testGetZone(string $domain, string $expectedIdn): void
+    public function testZone(string $domain, string $expectedIDN): void
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->getZone());
+        self::assertEquals($expectedIDN, $domain->zone());
     }
 
-    public static function providerForGetZone(): array
+    public static function providerForZone(): array
     {
         return [
             ['com', ''],
@@ -206,24 +206,24 @@ class DomainTest extends TestCase
     /**
      * @dataProvider rootDomainProvider
      */
-    public function testGetZoneOfRootDomain(string $rootDomain): void
+    public function testZoneOfRootDomain(string $rootDomain): void
     {
         $this->expectException(RootDomainException::class);
         $domain = new Domain($rootDomain);
-        $domain->getZone();
+        $domain->zone();
     }
 
     /**
-     * @dataProvider providerForGetTld
+     * @dataProvider providerForTLD
      */
-    public function testGetTld(string $domain, ?string $expectedIdn): void
+    public function testTLD(string $domain, ?string $expectedIDN): void
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->getTld());
+        self::assertEquals($expectedIDN, $domain->TLD());
     }
 
-    public static function providerForGetTld(): array
+    public static function providerForTLD(): array
     {
         return [
             ['com', 'com'],
@@ -251,28 +251,28 @@ class DomainTest extends TestCase
     /**
      * @dataProvider rootDomainProvider
      */
-    public function testGetTldOfRootDomain(string $rootDomain): void
+    public function testTLDOfRootDomain(string $rootDomain): void
     {
         $this->expectException(RootDomainException::class);
         $domain = new Domain($rootDomain);
-        $domain->getTld();
+        $domain->TLD();
     }
 
     /**
-     * @dataProvider providerForGetETld
+     * @dataProvider providerForETLD
      */
-    public function testGetETld(string $domain, ?string $expectedIdn): void
+    public function testETLD(string $domain, ?string $expectedIDN): void
     {
-        Domain::setETldProvider(static function () {
+        Domain::eTLDSetProvider(static function () {
             return ['com', 'ru', 'рф', 'edu.ru', 'мск.рф'];
         });
 
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->getETld());
+        self::assertEquals($expectedIDN, $domain->eTLD());
     }
 
-    public static function providerForGetETld(): array
+    public static function providerForETLD(): array
     {
         return [
             ['com', 'com'],
@@ -300,28 +300,28 @@ class DomainTest extends TestCase
     /**
      * @dataProvider rootDomainProvider
      */
-    public function testGetETldOfRootDomain(string $rootDomain): void
+    public function testETLDOfRootDomain(string $rootDomain): void
     {
         $this->expectException(RootDomainException::class);
         $domain = new Domain($rootDomain);
-        $domain->getETld();
+        $domain->eTLD();
     }
 
     /**
-     * @dataProvider providerForGetETldPlusOne
+     * @dataProvider providerForETLDPlusOne
      */
-    public function testGetETldPlusOne(string $domain, ?string $expectedIdn): void
+    public function testETLDPlusOne(string $domain, ?string $expectedIDN): void
     {
-        Domain::setETldProvider(static function () {
+        Domain::eTLDSetProvider(static function () {
             return ['com', 'ru', 'рф', 'edu.ru', 'мск.рф'];
         });
 
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->getETldPlusOne());
+        self::assertEquals($expectedIDN, $domain->eTLDPlusOne());
     }
 
-    public static function providerForGetETldPlusOne(): array
+    public static function providerForETLDPlusOne(): array
     {
         return [
             ['com', null],
@@ -349,19 +349,19 @@ class DomainTest extends TestCase
     /**
      * @dataProvider rootDomainProvider
      */
-    public function testGetETldPlusOneOfRootDomain(string $rootDomain): void
+    public function testETLDPlusOneOfRootDomain(string $rootDomain): void
     {
         $this->expectException(RootDomainException::class);
         $domain = new Domain($rootDomain);
-        $domain->getETldPlusOne();
+        $domain->eTLDPlusOne();
     }
 
     /**
-     * @dataProvider providerForGetWithout
+     * @dataProvider providerForWithout
      */
-    public function testGetWithout(string $domain, string $without, ?string $expectedIdn): void
+    public function testWithout(string $domain, string $without, ?string $expectedIDN): void
     {
-        Domain::setETldProvider(static function () {
+        Domain::eTLDSetProvider(static function () {
             return ['com', 'ru', 'рф', 'edu.ru', 'мск.рф'];
         });
 
@@ -369,25 +369,25 @@ class DomainTest extends TestCase
 
         switch ($without) {
             case 'zone':
-                $suffix = $domain->getZone();
+                $suffix = $domain->zone();
                 break;
             case 'TLD':
-                $suffix = $domain->getTld();
+                $suffix = $domain->TLD();
                 break;
             case 'eTLD':
-                $suffix = $domain->getETld();
+                $suffix = $domain->eTLD();
                 break;
             case 'eTLD+1':
-                $suffix = $domain->getETldPlusOne();
+                $suffix = $domain->eTLDPlusOne();
                 break;
             default:
                 $suffix = new Domain($without);
         }
 
-        self::assertEquals($expectedIdn, $domain->getWithout($suffix));
+        self::assertEquals($expectedIDN, $domain->without($suffix));
     }
 
-    public static function providerForGetWithout(): array
+    public static function providerForWithout(): array
     {
         return [
             ['example.com', '', 'example.com'],
@@ -486,11 +486,11 @@ class DomainTest extends TestCase
     /**
      * @dataProvider rootDomainProvider
      */
-    public function testGetWithoutOfRootDomain(string $rootDomain): void
+    public function testWithoutOfRootDomain(string $rootDomain): void
     {
         $this->expectException(RootDomainException::class);
         $domain = new Domain($rootDomain);
-        $domain->getWithout(new Domain('com'));
+        $domain->without(new Domain('com'));
     }
 
     /**
@@ -531,16 +531,16 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForGetLabels
+     * @dataProvider providerForLabels
      */
-    public function testGetLabels(string $domain, array $expectedLabels): void
+    public function testLabels(string $domain, array $expectedLabels): void
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedLabels, $domain->getLabels());
+        self::assertEquals($expectedLabels, $domain->labels());
     }
 
-    public static function providerForGetLabels(): array
+    public static function providerForLabels(): array
     {
         return [
             ['ru', [new Domain('ru')]],
@@ -554,16 +554,16 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForGetLabel
+     * @dataProvider providerForLabel
      */
-    public function testGetLabel(string $domain, int $level, string $expectedLabel): void
+    public function testLabel(string $domain, int $level, string $expectedLabel): void
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedLabel, $domain->getLabel($level));
+        self::assertEquals($expectedLabel, $domain->label($level));
     }
 
-    public static function providerForGetLabel(): array
+    public static function providerForLabel(): array
     {
         return [
             ['sub.domain.com', 1, 'com'],
@@ -575,16 +575,16 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForGetLabelNegative
+     * @dataProvider providerForLabelNegative
      */
-    public function testGetLabelNegative(string $domain, int $level): void
+    public function testLabelNegative(string $domain, int $level): void
     {
         $this->expectException(\OutOfRangeException::class);
         $domain = new Domain($domain);
-        $domain->getLabel($level);
+        $domain->label($level);
     }
 
-    public static function providerForGetLabelNegative(): array
+    public static function providerForLabelNegative(): array
     {
         return [
             ['sub.domain.com', -1, 'com'],
@@ -596,11 +596,11 @@ class DomainTest extends TestCase
     /**
      * @dataProvider providerForSliceToLevel
      */
-    public function testSliceToLevel(string $domain, int $level, string $expectedIdn): void
+    public function testSliceToLevel(string $domain, int $level, string $expectedIDN): void
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->sliceToLevel($level));
+        self::assertEquals($expectedIDN, $domain->sliceToLevel($level));
     }
 
     public static function providerForSliceToLevel(): array
@@ -634,17 +634,17 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForGetAbsoluteAndGetFqdn
+     * @dataProvider providerForAbsoluteAndFQDN
      */
-    public function testGetAbsoluteAndGetFqdn(string $domain, string $expectedIdn): void
+    public function testAbsoluteAndFQDN(string $domain, string $expectedIDN): void
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->getAbsolute());
-        self::assertEquals($expectedIdn, $domain->getFqdn());
+        self::assertEquals($expectedIDN, $domain->absolute());
+        self::assertEquals($expectedIDN, $domain->FQDN());
     }
 
-    public static function providerForGetAbsoluteAndGetFqdn(): array
+    public static function providerForAbsoluteAndFQDN(): array
     {
         return [
             ['sub.example.com', 'sub.example.com.'],
@@ -653,17 +653,17 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForIsAbsoluteAndIsFqdn
+     * @dataProvider providerForIsAbsoluteAndIsFQDN
      */
-    public function testIsAbsoluteAndIsFqdn(string $domain, bool $expected): void
+    public function testIsAbsoluteAndIsFQDN(string $domain, bool $expectedIsAbsolute): void
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expected, $domain->isAbsolute());
-        self::assertEquals($expected, $domain->isFqdn());
+        self::assertEquals($expectedIsAbsolute, $domain->isAbsolute());
+        self::assertEquals($expectedIsAbsolute, $domain->isFQDN());
     }
 
-    public static function providerForIsAbsoluteAndIsFqdn(): array
+    public static function providerForIsAbsoluteAndIsFQDN(): array
     {
         return [
             ['sub.example.com', false],
@@ -672,16 +672,16 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForGetRelative
+     * @dataProvider providerForRelative
      */
-    public function testGetRelative(string $domain, string $expectedIdn): void
+    public function testRelative(string $domain, string $expectedIDN): void
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->getRelative());
+        self::assertEquals($expectedIDN, $domain->relative());
     }
 
-    public static function providerForGetRelative(): array
+    public static function providerForRelative(): array
     {
         return [
             ['sub.example.com', 'sub.example.com'],
@@ -692,11 +692,11 @@ class DomainTest extends TestCase
     /**
      * @dataProvider providerForIsRoot
      */
-    public function testIsRoot(string $domain, bool $expected): void
+    public function testIsRoot(string $domain, bool $expectedIsRoot): void
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expected, $domain->isRoot());
+        self::assertEquals($expectedIsRoot, $domain->isRoot());
     }
 
     public static function providerForIsRoot(): array
@@ -710,16 +710,16 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForGetClone
+     * @dataProvider providerForClone
      */
-    public function testGetClone(string $domain, string $expectedIdn): void
+    public function testClone(string $domain, string $expectedIDN): void
     {
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->getClone());
+        self::assertEquals($expectedIDN, $domain->clone());
     }
 
-    public static function providerForGetClone(): array
+    public static function providerForClone(): array
     {
         return [
             ['example.com', 'example.com'],

@@ -54,17 +54,17 @@ class UrlDomainTest extends TestCase
         ];
     }
 
-    public function testGetZone(): void
+    public function testZone(): void
     {
         $domain = new UrlDomain('sub.example.com');
 
-        self::assertEquals('example.com', $domain->getZone());
+        self::assertEquals('example.com', $domain->zone());
     }
 
-    public function testGetZoneOfTld(): void
+    public function testZoneOfTLD(): void
     {
         $this->expectException(UrlDomainException::class);
         $domain = new UrlDomain('com');
-        $domain->getZone();
+        $domain->zone();
     }
 }
