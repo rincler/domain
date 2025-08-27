@@ -9,7 +9,7 @@ class Domain
     /**
      * @var string
      */
-    private $idn;
+    private $IDN;
 
     /**
      * @var string
@@ -17,24 +17,26 @@ class Domain
     private $punycode;
 
     /**
-     * @var TldRetrievalMode|null
+     * @var bool
      */
-    private static $defaultTldRetrievalMode = null;
+    private $isAbsolute = false;
 
     /**
      * @var callable|null
      */
-    private static $customTldsExtractor = null;
+    private static $eTLDProvider = null;
 
     /**
      * @var static[]|null
-     */
-    private static $customTlds = null;
+    */
+    private static $eTLDs = null;
 
-    public static function isValid(string $domain): bool
+    private const INVALID_DOMAIN_CHARACTERS = -101;
+
+    public static function isValid(string $domainRaw): bool
     {
         try {
-            new static($domain);
+            new static($domainRaw);
 
             return true;
         } catch (InvalidDomainException $e) {
@@ -42,142 +44,185 @@ class Domain
         }
     }
 
-    final public function __construct(string $domain)
+    public function __construct(string $domainRaw)
     {
-        $domain = trim($domain);
-
-        if ($domain === '') {
-            throw new InvalidDomainException(0, 'Empty domain.');
+        if (mb_substr($domainRaw, -1) === '.' && mb_substr($domainRaw, -2) !== '..') {
+            $this->isAbsolute = true;
+            $relativeDomainRaw = mb_substr($domainRaw, 0, -1);
+        } else {
+            $relativeDomainRaw = $domainRaw;
         }
 
-        $idn = \idn_to_utf8($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
+        if ($relativeDomainRaw === '') {
+            $this->IDN = '';
+            $this->punycode = '';
+            return;
+        }
+
+        $idn = \idn_to_utf8($relativeDomainRaw, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
 
         if ($idn === false) {
             throw new InvalidDomainException(
+                sprintf('Domain "%s" is not valid. IDN error bitset: %d', $relativeDomainRaw, $idnInfo['errors']),
                 $idnInfo['errors'],
-                sprintf('Domain "%s" is not valid. Idn error bitset: %d', $domain, $idnInfo['errors'])
             );
         }
 
-        $punycode = \idn_to_ascii($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
+        $punycode = \idn_to_ascii($relativeDomainRaw, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46, $idnInfo);
 
         if ($punycode === false) {
             throw new InvalidDomainException(
+                sprintf('Domain "%s" is not valid. IDN error bitset: %d.', $relativeDomainRaw, $idnInfo['errors']),
                 $idnInfo['errors'],
-                sprintf('Domain "%s" is not valid. Idn error bitset: %d.', $domain, $idnInfo['errors'])
             );
         }
 
         if (!\filter_var($punycode, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
             throw new InvalidDomainException(
-                0,
-                sprintf('Domain "%s" is not valid. Invalid characters.', $domain)
+                sprintf('Domain "%s" is not valid. Invalid characters.', $domainRaw),
+                self::INVALID_DOMAIN_CHARACTERS,
             );
         }
 
-        $this->idn = $idn;
+        $this->IDN = $idn;
         $this->punycode = $punycode;
-
-        $this->normalize();
     }
 
-    public function asIdn(): string
+    public function asIDN(): string
     {
-        return $this->idn;
+        return $this->preservingAbsoluteness($this->IDN);
     }
 
     public function asPunycode(): string
     {
-        return $this->punycode;
+        return $this->preservingAbsoluteness($this->punycode);
     }
 
     public function equals(self $domain): bool
     {
-        return $this->asIdn() === $domain->asIdn();
+        return $this->relative()->asIDN() === $domain->relative()->asIDN();
     }
 
-    public function getLevel(): int
+    public function level(): int
     {
-        return count($this->getLabels());
+        return count($this->labels());
     }
 
-    public function getZone(): ?self
+    public function zone(): self
     {
-        if ($this->getLevel() === 1) {
-            return null;
+        if ($this->isRoot()) {
+            throw new RootDomainException('Root domain has no zone.');
         }
 
-        $dotPosition = mb_strpos($this->asIdn(), '.');
-        $zone = mb_substr($this->asIdn(), $dotPosition + 1);
-
-        return new static($zone);
-    }
-
-    public function getWithoutZone(): ?self
-    {
-        if ($this->getZone() === null) {
-            return new static($this->asIdn());
+        if ($this->level() === 1) {
+            return new static('');
         }
 
-        $domainWithoutZone = preg_replace("/\.{$this->getZone()->asIdn()}$/u", '', $this->asIdn());
+        $dotPosition = mb_strpos($this->asIDN(), '.');
+        $zoneRaw = mb_substr($this->asIDN(), $dotPosition + 1);
 
-        return new static($domainWithoutZone);
+        return new static($zoneRaw);
     }
 
-    public function getTld(?TldRetrievalMode $mode = null): ?self
+    public function TLD(): self
     {
-        $mode = $mode ?? static::getDefaultTldRetrievalMode();
-
-        if ($this->getLevel() === 1) {
-            return null;
+        if ($this->isRoot()) {
+            throw new RootDomainException('Root domain has no TLD.');
         }
 
-        if (!$mode->equals(TldRetrievalMode::TRUE())) {
-            foreach (static::getCustomTlds() as $customTld) {
-                if (preg_match("/\.$customTld$/u", $this->asIdn())) {
-                    return $customTld;
-                }
+        $domain = $this->relative();
+
+        if ($domain->level() === 1) {
+            return $domain;
+        }
+
+        $dotPosition = mb_strrpos($domain->asIDN(), '.');
+        $tldRaw = mb_substr($domain->asIDN(), $dotPosition + 1);
+
+        return new static($tldRaw);
+    }
+
+    public function eTLD(): ?self
+    {
+        if ($this->isRoot()) {
+            throw new RootDomainException('Root domain has no eTLD.');
+        }
+
+        $domain = $this->relative();
+
+        foreach (static::eTLDs() as $eTLDItem) {
+            if ($domain->equals($eTLDItem) || preg_match("/\.$eTLDItem$/u", $domain->asIDN())) {
+                return $eTLDItem;
             }
         }
 
-        if ($mode->equals(TldRetrievalMode::CUSTOM())) {
+        return null;
+    }
+
+    public function eTLDPlusOne(): ?self
+    {
+        if ($this->isRoot()) {
+            throw new RootDomainException('Root domain has no eTLD+1.');
+        }
+
+        $domain = $this->relative();
+
+        $eTLD = null;
+
+        foreach (static::eTLDs() as $eTLDItem) {
+            if ($domain->equals($eTLDItem) || preg_match("/\.$eTLDItem$/u", $domain->asIDN())) {
+                $eTLD = $eTLDItem;
+                break;
+            }
+        }
+
+        if ($eTLD === null || $domain->level() < $eTLD->level() + 1) {
             return null;
         }
 
-        $dotPosition = mb_strrpos($this->asIdn(), '.');
-        $tld = mb_substr($this->asIdn(), $dotPosition + 1);
-
-        return new static($tld);
+        return $domain->sliceToLevel($eTLD->level() + 1);
     }
 
-    public function getWithoutTld(?TldRetrievalMode $mode = null): ?self
+    public function without(?self $suffix): ?self
     {
-        $mode = $mode ?? static::getDefaultTldRetrievalMode();
-
-        if ($this->getTld($mode) === null) {
-            return new static($this->asIdn());
+        if ($this->isRoot()) {
+            throw new RootDomainException('Root domain has no suffix.');
         }
 
-        $domainWithoutTld = preg_replace("/\.{$this->getTld($mode)->asIdn()}$/u", '', $this->asIdn());
+        if ($suffix === null || $suffix->isRoot() || $suffix->level() > $this->level()) {
+            return $this->clone()->relative();
+        }
 
-        return new static($domainWithoutTld);
+        if ($this->equals($suffix)) {
+            return null;
+        }
+
+        $domainWithoutSuffixRaw = preg_replace("/\.{$suffix->relative()->asIDN()}$/u", '', $this->relative()->asIDN());
+
+        return new static($domainWithoutSuffixRaw);
     }
 
     /**
      * @return static[]
      */
-    public function getLabels(): array
+    public function labels(): array
     {
-        $labels = array_reverse(explode('.', $this->asIdn()));
+        if ($this->isRoot()) {
+            return [];
+        }
 
-        return array_map(static function (string $label) {
-            return new static($label);
-        }, $labels);
+        $domain = $this->relative();
+
+        $labelsRaw = array_reverse(explode('.', $domain->asIDN()));
+
+        return array_map(static function (string $labelRaw) {
+            return new static($labelRaw);
+        }, $labelsRaw);
     }
 
-    public function getLabel(int $level): self
+    public function label(int $level): self
     {
-        $labels = $this->getLabels();
+        $labels = $this->labels();
         $idx = $level - 1;
 
         if (!isset($labels[$idx])) {
@@ -189,7 +234,7 @@ class Domain
 
     public function sliceToLevel(int $level): self
     {
-        $labels = $this->getLabels();
+        $labels = $this->labels();
 
         if (!isset($labels[$level - 1])) {
             throw new \OutOfRangeException(sprintf('A label on the level %d does not exist.', $level));
@@ -200,83 +245,90 @@ class Domain
         return new static(implode('.', array_reverse($slice)));
     }
 
+    public function absolute(): self
+    {
+        return new static($this->IDN . '.');
+    }
+
+    public function isAbsolute(): bool
+    {
+        return $this->isAbsolute;
+    }
+
+    public function FQDN(): self
+    {
+        return $this->absolute();
+    }
+
+    public function isFQDN(): bool
+    {
+        return $this->isAbsolute();
+    }
+
+    public function relative(): self
+    {
+        return new static($this->IDN);
+    }
+
+    public function isRoot(): bool
+    {
+        return $this->IDN === '';
+    }
+
+    public function clone(): self
+    {
+        return new static($this->asIDN());
+    }
+
     public function __toString(): string
     {
-        return $this->idn;
-    }
-
-    public static function setDefaultTldRetrievalMode(TldRetrievalMode $mode): void
-    {
-        self::$defaultTldRetrievalMode = $mode;
-    }
-
-    protected static function getDefaultTldRetrievalMode(): TldRetrievalMode
-    {
-        return self::$defaultTldRetrievalMode ?? TldRetrievalMode::MIX();
+        return $this->asIDN();
     }
 
     /**
-     * Defines custom TLDs.
-     *
-     * @param callable $extractor Callback, that returns an array of custom TLDs, e.g. `[net.ru, org.ru]`.
-     *                            The callback is called (on `getTld` and `getWithoutTld`) once and returned array is cached.
+     * @param callable $provider Callback, that returns an array of eTLDs, e.g. `[net.ru, org.ru]`.
+     *                           The callback is invoked once (on `eTLD` and `eTLDPlusOne`), and its result is cached.
      */
-    public static function setCustomTlds(callable $extractor): void
+    public static function eTLDSetProvider(callable $provider): void
     {
-        self::$customTldsExtractor = $extractor;
-        self::$customTlds = null;
+        self::$eTLDProvider = $provider;
+        self::$eTLDs = null;
     }
 
-    public static function unsetCustomTlds(): void
+    public static function eTLDUnset(): void
     {
-        self::$customTldsExtractor = null;
-        self::$customTlds = null;
+        self::$eTLDProvider = null;
+        self::$eTLDs = null;
     }
 
     /**
      * @return static[]
      */
-    protected static function getCustomTlds(): array
+    protected static function eTLDs(): array
     {
-        if (self::$customTldsExtractor === null) {
+        if (self::$eTLDProvider === null) {
             return [];
         }
 
-        if (self::$customTlds !== null) {
-            return self::$customTlds;
+        if (self::$eTLDs !== null) {
+            return self::$eTLDs;
         }
 
-        $customTlds = call_user_func(self::$customTldsExtractor);
+        $eTLDsRaw = call_user_func(self::$eTLDProvider);
 
-        self::$customTlds = array_map(static function (string $customTld) {
-            return new static($customTld);
-        }, $customTlds);
+        self::$eTLDs = array_map(static function (string $eTLDRaw) {
+            return new static($eTLDRaw);
+        }, $eTLDsRaw);
 
-        usort(self::$customTlds, function (self $tldA, self $tldB) {
-            return $tldB->getLevel() <=> $tldA->getLevel();
+        usort(self::$eTLDs, function (self $tldA, self $tldB) {
+            return $tldB->level() <=> $tldA->level();
         });
 
-        return self::$customTlds;
+        return self::$eTLDs;
     }
 
-    private function normalize(): void
+    protected function preservingAbsoluteness(string $domainRaw): string
     {
-        $this->removeDotAtTheEnd();
-        $this->toLowerCase();
-    }
-
-    private function removeDotAtTheEnd(): void
-    {
-        $lastCharacter = mb_substr($this->asIdn(), -1);
-        if ($lastCharacter === '.') {
-            $this->idn = mb_substr($this->asIdn(), 0, -1);
-            $this->punycode = mb_substr($this->asPunycode(), 0, -1);
-        }
-    }
-
-    private function toLowerCase(): void
-    {
-        $this->idn = mb_strtolower($this->asIdn());
-        $this->punycode = mb_strtolower($this->asPunycode());
+        return $this->isAbsolute() ? $domainRaw . '.' : $domainRaw;
     }
 }
