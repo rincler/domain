@@ -31,6 +31,98 @@ class DomainTest extends TestCase
             ['exam-ple.com', 'exam-ple.com'],
             ['exam--ple.com', 'exam--ple.com'],
             ['', ''],
+            ['.', '.'],
+        ];
+    }
+
+    /**
+     * @dataProvider providerForInvalidDomain
+     */
+    public function testInvalidDomain(string $domain): void
+    {
+        $this->expectException(InvalidDomainException::class);
+        new Domain($domain);
+    }
+
+    public static function providerForInvalidDomain(): array
+    {
+        return [
+            [' '],
+            ['example.com '],
+            [' example.com'],
+            ['.com'],
+            ['ab--c'],
+            ['аб--в'],
+            ['..'],
+            ['com..'],
+            ['-'],
+            ['-.com'],
+            ['a-.com'],
+            ['-a.com'],
+            ['_'],
+            ['_.com'],
+            ['a_.com'],
+            ['_a.com'],
+            ['a_b.com'],
+            // maximum length of domain label in punycode - 63 (64 in test)
+            ['aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbcc64'],
+            ['ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50аааааб'],
+            // maximum length of domain in punycode - 253 (254 in test)
+            ['aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbc62'],
+            ['ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50аааа'],
+        ];
+    }
+
+    /**
+     * @dataProvider providerForIsValid
+     */
+    public function testIsValid(string $domain, bool $expectedIsValid): void
+    {
+        self::assertEquals($expectedIsValid, Domain::isValid($domain));
+    }
+
+    public static function providerForIsValid(): array
+    {
+        return [
+            ['example.com', true],
+            ['пример.рф', true],
+            ['com', true],
+            ['com.', true],
+            ['рф', true],
+            ['', true],
+            ['.', true],
+            ['xn--80acd', true],
+            ['xn--80acd.ru', true],
+            ['a-a-a', true],
+            ['123', true],
+            [' ', false],
+            ['example.com ', false],
+            [' example.com', false],
+            ['.com', false],
+            ['ab--c', false],
+            ['аб--в', false],
+            ['..', false],
+            ['com..', false],
+            ['-', false],
+            ['-.com', false],
+            ['a-.com', false],
+            ['-a.com', false],
+            ['_', false],
+            ['_.com', false],
+            ['a_.com', false],
+            ['_a.com', false],
+            ['a_b.com', false],
+
+            // maximum length of domain label in punycode - 63
+            ['aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63', true],
+            ['aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbcc64', false],
+            ['ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа', true],
+            ['ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50аааааb', false],
+            // maximum length of domain in punycode - 253
+            ['aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbb61', true],
+            ['aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbb62', false],
+            ['ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааа', true],
+            ['ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50аааа', false],
         ];
     }
 
@@ -102,6 +194,7 @@ class DomainTest extends TestCase
             ['EXAMPLE.COM', 'example.com', true],
             ['example.com', 'another.com', false],
             ['', '', true],
+            ['.', '', true],
         ];
     }
 
@@ -123,48 +216,8 @@ class DomainTest extends TestCase
             ['пример.рф', 2],
             ['sub.example.ru', 3],
             ['sub.example.ru.', 3],
-        ];
-    }
-
-    /**
-     * @dataProvider providerForIsValid
-     */
-    public function testIsValid(string $domain, bool $expectedIsValid): void
-    {
-        self::assertEquals($expectedIsValid, Domain::isValid($domain));
-    }
-
-    public static function providerForIsValid(): array
-    {
-        return [
-            ['com', true],
-            ['com.', true],
-            ['', true],
-            ['.', true],
-            [' ', false],
-            ['com..', false],
-            ['ab--c', false],
-            ['аб--в', false],
-            ['xn--80acd', true],
-            ['xn--80acd.ru', true],
-            ['рф', true],
-            ['example.com', true],
-            ['пример.рф', true],
-            ['-', false],
-            ['-aaa', false],
-            ['aaa-', false],
-            ['a-a-a', true],
-            ['123', true],
-            // maximum length of domain label in punycode - 63
-            ['aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63', true],
-            ['aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbcc64', false],
-            ['ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа', true],
-            ['ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50аааааb', false],
-            // maximum length of domain in punycode - 253
-            ['aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbb61', true],
-            ['aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbb62', false],
-            ['ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааа', true],
-            ['ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50аааа', false],
+            ['', 0],
+            ['.', 0],
         ];
     }
 
@@ -200,6 +253,7 @@ class DomainTest extends TestCase
             ['example.msk.ru', 'msk.ru'],
             ['com.com', 'com'],
             ['com.com.com', 'com.com'],
+            ['example.net', 'net'],
         ];
     }
 
@@ -494,43 +548,6 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForInvalidDomain
-     */
-    public function testInvalidDomain(string $domain): void
-    {
-        $this->expectException(InvalidDomainException::class);
-        new Domain($domain);
-    }
-
-    public static function providerForInvalidDomain(): array
-    {
-        return [
-            ['  '],
-            ['example.com '],
-            [' example.com'],
-            ['.com'],
-            ['ab--c'],
-            ['аб--в'],
-            ['com..'],
-            ['-'],
-            ['-.com'],
-            ['a-.com'],
-            ['-a.com'],
-            ['_'],
-            ['_.com'],
-            ['a_.com'],
-            ['_a.com'],
-            ['a_b.com'],
-            // maximum length of domain label in punycode - 63 (64 in test)
-            ['aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbcc64'],
-            ['ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50аааааб'],
-            // maximum length of domain in punycode - 253 (254 in test)
-            ['aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbbc63.aaaaabbbbbcccccdddddeee25aaaaabbbbbcccccdddddeee50aaaaabbbbc62'],
-            ['ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50ааааа.ааааабббббвввввгггггддд25ааааабббббвввввгггггддд50аааа'],
-        ];
-    }
-
-    /**
      * @dataProvider providerForLabels
      */
     public function testLabels(string $domain, array $expectedLabels): void
@@ -550,6 +567,8 @@ class DomainTest extends TestCase
             ['пример.рф', [new Domain('xn--p1ai'), new Domain('xn--e1afmkfd')]],
             ['xn--e1afmkfd.xn--p1ai', [new Domain('рф'), new Domain('пример')]],
             ['xn--e1afmkfd.xn--p1ai', [new Domain('xn--p1ai'), new Domain('xn--e1afmkfd')]],
+            ['', []],
+            ['.', []],
         ];
     }
 
@@ -569,6 +588,7 @@ class DomainTest extends TestCase
             ['sub.domain.com', 1, 'com'],
             ['sub.domain.com', 2, 'domain'],
             ['sub.domain.com', 3, 'sub'],
+            ['sub.domain.com.', 3, 'sub'],
             ['пример.рф', 1, 'рф'],
             ['пример.рф', 2, 'пример'],
         ];
@@ -609,6 +629,7 @@ class DomainTest extends TestCase
             ['sub.domain.com', 1, 'com'],
             ['sub.domain.com', 2, 'domain.com'],
             ['sub.domain.com', 3, 'sub.domain.com'],
+            ['sub.domain.com.', 3, 'sub.domain.com'],
             ['пример.рф', 1, 'рф'],
             ['пример.рф', 2, 'пример.рф'],
         ];

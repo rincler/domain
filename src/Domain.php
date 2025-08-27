@@ -115,7 +115,7 @@ class Domain
         }
 
         if ($this->level() === 1) {
-            return new Domain('');
+            return new static('');
         }
 
         $dotPosition = mb_strpos($this->asIDN(), '.');
@@ -183,7 +183,7 @@ class Domain
         return $domain->sliceToLevel($eTLD->level() + 1);
     }
 
-    public function without(?Domain $suffix): ?Domain
+    public function without(?self $suffix): ?self
     {
         if ($this->isRoot()) {
             throw new RootDomainException('Root domain has no suffix.');
@@ -207,6 +207,10 @@ class Domain
      */
     public function labels(): array
     {
+        if ($this->isRoot()) {
+            return [];
+        }
+
         $domain = $this->relative();
 
         $labelsRaw = array_reverse(explode('.', $domain->asIDN()));
