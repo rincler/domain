@@ -124,19 +124,6 @@ class Domain
         return new static($zoneRaw);
     }
 
-    public function getWithoutZone(): self
-    {
-        $zone = $this->getZone();
-
-        if ($this->getLevel() === 1) {
-            return $this->getRelative();
-        }
-
-        $domainWithoutZoneRaw = preg_replace("/\.{$zone->asIdn()}$/u", '', $this->asIdn());
-
-        return new static($domainWithoutZoneRaw);
-    }
-
     public function getTld(): self
     {
         if ($this->isRoot()) {
@@ -155,20 +142,6 @@ class Domain
         return new static($tldRaw);
     }
 
-    public function getWithoutTld(): ?self
-    {
-        $domain = $this->getRelative();
-        $tld = $domain->getTld();
-
-        if ($domain->equals($tld)) {
-            return null;
-        }
-
-        $domainWithoutTldRaw = preg_replace("/\.{$tld->asIdn()}$/u", '', $domain->asIdn());
-
-        return new static($domainWithoutTldRaw);
-    }
-
     public function getETld(): ?self
     {
         if ($this->isRoot()) {
@@ -184,24 +157,6 @@ class Domain
         }
 
         return null;
-    }
-
-    public function getWithoutETld(): ?self
-    {
-        $domain = $this->getRelative();
-        $eTld = $domain->getETld();
-
-        if ($eTld === null) {
-            return $domain;
-        }
-
-        if ($domain->equals($eTld)) {
-            return null;
-        }
-
-        $domainWithoutETldRaw = preg_replace("/\.{$eTld->asIdn()}$/u", '', $domain->asIdn());
-
-        return new static($domainWithoutETldRaw);
     }
 
     public function getETldPlusOne(): ?self
@@ -228,22 +183,23 @@ class Domain
         return $domain->sliceToLevel($eTld->getLevel() + 1);
     }
 
-    public function getWithoutEtldPlusOne(): ?self
+    public function getWithout(?Domain $suffix): ?Domain
     {
-        $domain = $this->getRelative();
-        $eTldPlusOne = $domain->getETldPlusOne();
-
-        if ($eTldPlusOne === null) {
-            return $domain;
+        if ($this->isRoot()) {
+            throw new RootDomainException('Root domain has no suffix.');
         }
 
-        if ($domain->equals($eTldPlusOne)) {
+        if ($suffix === null || $suffix->isRoot() || $suffix->getLevel() > $this->getLevel()) {
+            return $this->getClone()->getRelative();
+        }
+
+        if ($this->equals($suffix)) {
             return null;
         }
 
-        $domainWithoutETldPlusOneRaw = preg_replace("/\.{$eTldPlusOne->asIdn()}$/u", '', $domain->asIdn());
+        $domainWithoutSuffixRaw = preg_replace("/\.{$suffix->getRelative()->asIdn()}$/u", '', $this->getRelative()->asIdn());
 
-        return new static($domainWithoutETldPlusOneRaw);
+        return new static($domainWithoutSuffixRaw);
     }
 
     /**
@@ -327,7 +283,7 @@ class Domain
 
     /**
      * @param callable $provider Callback, that returns an array of eTLDs, e.g. `[net.ru, org.ru]`.
-     *                            The callback is invoked once (on `getETld`, `getWithoutETld`, `getETldPlusOne` and `getWithoutETldPlusOne`), and its result is cached.
+     *                           The callback is invoked once (on `getETld` and `getETldPlusOne`), and its result is cached.
      */
     public static function setETldProvider(callable $provider): void
     {

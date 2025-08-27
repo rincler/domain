@@ -67,18 +67,4 @@ class UrlDomainTest extends TestCase
         $domain = new UrlDomain('com');
         $domain->getZone();
     }
-
-    public function testGetWithoutZone(): void
-    {
-        $domain = new UrlDomain('sub.example.com');
-
-        self::assertEquals('sub', $domain->getWithoutZone());
-    }
-
-    public function testGetWithoutZoneOfTld(): void
-    {
-        $this->expectException(UrlDomainException::class);
-        $domain = new UrlDomain('com');
-        $domain->getWithoutZone();
-    }
 }

@@ -214,51 +214,6 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForGetWithoutZone
-     */
-    public function testGetWithoutZone(string $domain, string $expectedIdn): void
-    {
-        $domain = new Domain($domain);
-
-        self::assertEquals($expectedIdn, $domain->getWithoutZone());
-    }
-
-    public static function providerForGetWithoutZone(): array
-    {
-        return [
-            ['com', 'com'],
-            ['com.', 'com'],
-            ['рф', 'рф'],
-            ['example.com', 'example'],
-            ['example.com.', 'example'],
-            ['пример.рф', 'пример'],
-            ['sub.example.com', 'sub'],
-            ['суб.пример.рф', 'суб'],
-            ['edu.ru', 'edu'],
-            ['example.edu.ru', 'example'],
-            ['sub.example.edu.ru', 'sub'],
-            ['example.edu.ru.edu.ru', 'example'],
-            ['мск.рф', 'мск'],
-            ['пример.мск.рф', 'пример'],
-            ['суб.пример.мск.рф', 'суб'],
-            ['пример.мск.рф.мск.рф', 'пример'],
-            ['example.msk.ru', 'example'],
-            ['com.com', 'com'],
-            ['com.com.com', 'com'],
-        ];
-    }
-
-    /**
-     * @dataProvider rootDomainProvider
-     */
-    public function testGetWithoutZoneOfRootDomain(string $rootDomain): void
-    {
-        $this->expectException(RootDomainException::class);
-        $domain = new Domain($rootDomain);
-        $domain->getWithoutZone();
-    }
-
-    /**
      * @dataProvider providerForGetTld
      */
     public function testGetTld(string $domain, ?string $expectedIdn): void
@@ -301,51 +256,6 @@ class DomainTest extends TestCase
         $this->expectException(RootDomainException::class);
         $domain = new Domain($rootDomain);
         $domain->getTld();
-    }
-
-    /**
-     * @dataProvider providerForGetWithoutTld
-     */
-    public function testGetWithoutTld(string $domain, ?string $expectedIdn): void
-    {
-        $domain = new Domain($domain);
-
-        self::assertEquals($expectedIdn, $domain->getWithoutTld());
-    }
-
-    public static function providerForGetWithoutTld(): array
-    {
-        return [
-            ['com', null],
-            ['рф', null],
-            ['example.com', 'example'],
-            ['пример.рф', 'пример'],
-            ['sub.example.com', 'sub.example'],
-            ['суб.пример.рф', 'суб.пример'],
-            ['edu.ru', 'edu'],
-            ['example.edu.ru', 'example.edu'],
-            ['example.edu.ru.', 'example.edu'],
-            ['sub.example.edu.ru', 'sub.example.edu'],
-            ['example.edu.ru.edu.ru', 'example.edu.ru.edu'],
-            ['мск.рф', 'мск'],
-            ['пример.мск.рф', 'пример.мск'],
-            ['суб.пример.мск.рф', 'суб.пример.мск'],
-            ['пример.мск.рф.мск.рф', 'пример.мск.рф.мск'],
-            ['example.msk.ru', 'example.msk'],
-            ['com.com', 'com'],
-            ['com.com.com', 'com.com'],
-            ['example.net', 'example'],
-        ];
-    }
-
-    /**
-     * @dataProvider rootDomainProvider
-     */
-    public function testGetWithoutTldOfRootDomain(string $rootDomain): void
-    {
-        $this->expectException(RootDomainException::class);
-        $domain = new Domain($rootDomain);
-        $domain->getWithoutTld();
     }
 
     /**
@@ -398,55 +308,6 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForGetWithoutETld
-     */
-    public function testGetWithoutETld(string $domain, ?string $expectedIdn): void
-    {
-        Domain::setETldProvider(static function () {
-            return ['com', 'ru', 'рф', 'edu.ru', 'мск.рф'];
-        });
-
-        $domain = new Domain($domain);
-
-        self::assertEquals($expectedIdn, $domain->getWithoutETld());
-    }
-
-    public static function providerForGetWithoutETld(): array
-    {
-        return [
-            ['com', null],
-            ['рф', null],
-            ['example.com', 'example'],
-            ['пример.рф', 'пример'],
-            ['sub.example.com', 'sub.example'],
-            ['суб.пример.рф', 'суб.пример'],
-            ['edu.ru', null],
-            ['example.edu.ru', 'example'],
-            ['example.edu.ru.', 'example'],
-            ['sub.example.edu.ru', 'sub.example'],
-            ['example.edu.ru.edu.ru', 'example.edu.ru'],
-            ['мск.рф', null],
-            ['пример.мск.рф', 'пример'],
-            ['суб.пример.мск.рф', 'суб.пример'],
-            ['пример.мск.рф.мск.рф', 'пример.мск.рф'],
-            ['example.msk.ru', 'example.msk'],
-            ['com.com', 'com'],
-            ['com.com.com', 'com.com'],
-            ['example.net', 'example.net'],
-        ];
-    }
-
-    /**
-     * @dataProvider rootDomainProvider
-     */
-    public function testGetWithoutETldOfRootDomain(string $rootDomain): void
-    {
-        $this->expectException(RootDomainException::class);
-        $domain = new Domain($rootDomain);
-        $domain->getWithoutETld();
-    }
-
-    /**
      * @dataProvider providerForGetETldPlusOne
      */
     public function testGetETldPlusOne(string $domain, ?string $expectedIdn): void
@@ -496,9 +357,9 @@ class DomainTest extends TestCase
     }
 
     /**
-     * @dataProvider providerForGetWithoutETldPlusOne
+     * @dataProvider providerForGetWithout
      */
-    public function testGetWithoutETldPlusOne(string $domain, ?string $expectedIdn): void
+    public function testGetWithout(string $domain, string $without, ?string $expectedIdn): void
     {
         Domain::setETldProvider(static function () {
             return ['com', 'ru', 'рф', 'edu.ru', 'мск.рф'];
@@ -506,42 +367,130 @@ class DomainTest extends TestCase
 
         $domain = new Domain($domain);
 
-        self::assertEquals($expectedIdn, $domain->getWithoutEtldPlusOne());
+        switch ($without) {
+            case 'zone':
+                $suffix = $domain->getZone();
+                break;
+            case 'TLD':
+                $suffix = $domain->getTld();
+                break;
+            case 'eTLD':
+                $suffix = $domain->getETld();
+                break;
+            case 'eTLD+1':
+                $suffix = $domain->getETldPlusOne();
+                break;
+            default:
+                $suffix = new Domain($without);
+        }
+
+        self::assertEquals($expectedIdn, $domain->getWithout($suffix));
     }
 
-    public static function providerForGetWithoutETldPlusOne(): array
+    public static function providerForGetWithout(): array
     {
         return [
-            ['com', 'com'],
-            ['рф', 'рф'],
-            ['example.com', null],
-            ['пример.рф', null],
-            ['sub.example.com', 'sub'],
-            ['суб.пример.рф', 'суб'],
-            ['edu.ru', 'edu.ru'],
-            ['example.edu.ru', null],
-            ['example.edu.ru.', null],
-            ['sub.example.edu.ru', 'sub'],
-            ['example.edu.ru.edu.ru', 'example.edu'],
-            ['мск.рф', 'мск.рф'],
-            ['пример.мск.рф', null],
-            ['суб.пример.мск.рф', 'суб'],
-            ['пример.мск.рф.мск.рф', 'пример.мск'],
-            ['example.msk.ru', 'example'],
-            ['com.com', null],
-            ['com.com.com', 'com'],
-            ['example.net', 'example.net'],
+            ['example.com', '', 'example.com'],
+            ['example.com', '.', 'example.com'],
+            ['example.com.', '', 'example.com'],
+            ['example.com.', '.', 'example.com'],
+            ['example.com', 'sub.example.com', 'example.com'],
+            ['example.com.', 'sub.example.com', 'example.com'],
+            ['com', 'zone', 'com'],
+            ['com.', 'zone', 'com'],
+            ['рф', 'zone', 'рф'],
+            ['example.com', 'zone', 'example'],
+            ['example.com.', 'zone', 'example'],
+            ['пример.рф', 'zone', 'пример'],
+            ['sub.example.com', 'zone', 'sub'],
+            ['суб.пример.рф', 'zone', 'суб'],
+            ['edu.ru', 'zone', 'edu'],
+            ['example.edu.ru', 'zone', 'example'],
+            ['example.edu.ru.', 'zone', 'example'],
+            ['sub.example.edu.ru', 'zone', 'sub'],
+            ['example.edu.ru.edu.ru', 'zone', 'example'],
+            ['мск.рф', 'zone', 'мск'],
+            ['пример.мск.рф', 'zone', 'пример'],
+            ['суб.пример.мск.рф', 'zone', 'суб'],
+            ['пример.мск.рф.мск.рф', 'zone', 'пример'],
+            ['example.msk.ru', 'zone', 'example'],
+            ['com.com', 'zone', 'com'],
+            ['com.com.com', 'zone', 'com'],
+            ['example.net', 'zone', 'example'],
+            ['com', 'TLD', null],
+            ['com.', 'TLD', null],
+            ['рф', 'TLD', null],
+            ['example.com', 'TLD', 'example'],
+            ['example.com.', 'TLD', 'example'],
+            ['пример.рф', 'TLD', 'пример'],
+            ['sub.example.com', 'TLD', 'sub.example'],
+            ['суб.пример.рф', 'TLD', 'суб.пример'],
+            ['edu.ru', 'TLD', 'edu'],
+            ['example.edu.ru', 'TLD', 'example.edu'],
+            ['example.edu.ru.', 'TLD', 'example.edu'],
+            ['sub.example.edu.ru', 'TLD', 'sub.example.edu'],
+            ['example.edu.ru.edu.ru', 'TLD', 'example.edu.ru.edu'],
+            ['мск.рф', 'TLD', 'мск'],
+            ['пример.мск.рф', 'TLD', 'пример.мск'],
+            ['суб.пример.мск.рф', 'TLD', 'суб.пример.мск'],
+            ['пример.мск.рф.мск.рф', 'TLD', 'пример.мск.рф.мск'],
+            ['example.msk.ru', 'TLD', 'example.msk'],
+            ['com.com', 'TLD', 'com'],
+            ['com.com.com', 'TLD', 'com.com'],
+            ['example.net', 'TLD', 'example'],
+            ['com', 'eTLD',  null],
+            ['com.', 'eTLD', null],
+            ['рф', 'eTLD', null],
+            ['example.com', 'eTLD', 'example'],
+            ['example.com.', 'eTLD', 'example'],
+            ['пример.рф', 'eTLD', 'пример'],
+            ['sub.example.com', 'eTLD', 'sub.example'],
+            ['суб.пример.рф', 'eTLD', 'суб.пример'],
+            ['edu.ru', 'eTLD', null],
+            ['example.edu.ru', 'eTLD', 'example'],
+            ['example.edu.ru.', 'eTLD', 'example'],
+            ['sub.example.edu.ru', 'eTLD', 'sub.example'],
+            ['example.edu.ru.edu.ru', 'eTLD', 'example.edu.ru'],
+            ['мск.рф', 'eTLD', null],
+            ['пример.мск.рф', 'eTLD', 'пример'],
+            ['суб.пример.мск.рф', 'eTLD', 'суб.пример'],
+            ['пример.мск.рф.мск.рф', 'eTLD', 'пример.мск.рф'],
+            ['example.msk.ru', 'eTLD', 'example.msk'],
+            ['com.com', 'eTLD', 'com'],
+            ['com.com.com', 'eTLD', 'com.com'],
+            ['example.net', 'eTLD', 'example.net'],
+            ['com', 'eTLD+1', 'com'],
+            ['com.', 'eTLD+1', 'com'],
+            ['рф', 'eTLD+1', 'рф'],
+            ['example.com', 'eTLD+1', null],
+            ['example.com.', 'eTLD+1', null],
+            ['пример.рф', 'eTLD+1', null],
+            ['sub.example.com', 'eTLD+1', 'sub'],
+            ['суб.пример.рф', 'eTLD+1', 'суб'],
+            ['edu.ru', 'eTLD+1', 'edu.ru'],
+            ['example.edu.ru', 'eTLD+1', null],
+            ['example.edu.ru.', 'eTLD+1', null],
+            ['sub.example.edu.ru', 'eTLD+1', 'sub'],
+            ['example.edu.ru.edu.ru', 'eTLD+1', 'example.edu'],
+            ['мск.рф', 'eTLD+1', 'мск.рф'],
+            ['пример.мск.рф', 'eTLD+1', null],
+            ['суб.пример.мск.рф', 'eTLD+1', 'суб'],
+            ['пример.мск.рф.мск.рф', 'eTLD+1', 'пример.мск'],
+            ['example.msk.ru', 'eTLD+1', 'example'],
+            ['com.com', 'eTLD+1', null],
+            ['com.com.com', 'eTLD+1', 'com'],
+            ['example.net', 'eTLD+1', 'example.net'],
         ];
     }
 
     /**
      * @dataProvider rootDomainProvider
      */
-    public function testGetWithoutETldPlusOneOfRootDomain(string $rootDomain): void
+    public function testGetWithoutOfRootDomain(string $rootDomain): void
     {
         $this->expectException(RootDomainException::class);
         $domain = new Domain($rootDomain);
-        $domain->getWithoutEtldPlusOne();
+        $domain->getWithout(new Domain('com'));
     }
 
     /**

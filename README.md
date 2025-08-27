@@ -18,9 +18,9 @@ echo $domain; // sub.example.com
 echo $domain->asIdn(); // sub.example.com
 echo $domain->asPunycode(); // sub.example.com
 echo $domain->getZone(); // example.com
-echo $domain->getWithoutZone(); // sub
+echo $domain->getWithout($domain->getZone()); // sub
 echo $domain->getTld(); // com
-echo $domain->getWithoutTld(); // sub.example
+echo $domain->getWithout($domain->getTld()); // sub.example
 echo $domain->getLevel(); // 3
 echo $domain->getLabels(); // [new Domain('com'), new Domain('example'), new Domain('sub')]
 echo $domain->getLabel(2); // example
@@ -66,13 +66,10 @@ echo $domain->getRelative(); // sub.example.com
 - `equals(Domain $domain): bool` - Returns `true` if the current domain equals the specified domain, `false` otherwise.
 - `getLevel(): int` - Returns the number of levels in the domain.
 - `getZone(): Domain` - Returns the domain zone.
-- `getWithoutZone(): Domain` - Returns the domain without its zone.
 - `getTld(): Domain` - Returns the domain’s top-level domain (TLD).
-- `getWithoutTld(): Domain` - Returns the domain excluding the TLD.
 - `getETld(): Domain` - Returns the domain’s effective top-level domain (eTLD).
-- `getWithoutETld(): Domain` - Returns the domain excluding the eTLD.
-- `getETldPlusOne(): Domain` - Returns the domain’s effective top-level domain plus the next part (eTLD+1).
-- `getWithoutETldPlusOne(): Domain` - Returns the domain excluding the eTLD+1.
+- `getETldPlusOne(): Domain` - Returns the domain’s effective top-level domain plus the next label (eTLD+1).
+- `getWithout(Domain $suffix): Domain` - Returns the domain without the specified suffix.
 - `getLabels(): array` - Returns an array containing all labels of the domain.
 - `getLabel(int $level): array` - Returns the label corresponding to the given domain level.
 - `sliceToLevel(int $level): array` - Returns an array of domain labels up to the given level.
