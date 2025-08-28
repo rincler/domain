@@ -67,9 +67,9 @@ composer require rincler/domain
 - `level(): int` - Returns the number of levels in the domain.
 - `zone(): Domain` - Returns the domain zone.
 - `TLD(): Domain` - Returns the domain’s top-level domain (TLD).
-- `eTLD(): Domain` - Returns the domain’s effective top-level domain (eTLD).
-- `eTLDPlusOne(): Domain` - Returns the domain’s effective top-level domain plus the next label (eTLD+1).
-- `without(Domain $suffix): Domain` - Returns the domain without the specified suffix.
+- `eTLD(): ?Domain` - Returns the domain’s effective top-level domain (eTLD).
+- `eTLDPlusOne(): ?Domain` - Returns the domain’s effective top-level domain plus the next label (eTLD+1).
+- `without(Domain $suffix): ?Domain` - Returns the domain without the specified suffix.
 - `labels(): Domain[]` - Returns an array containing all labels of the domain.
 - `label(int $level): Domain` - Returns the label corresponding to the given domain level.
 - `sliceToLevel(int $level): Domain` - Returns the domain up to the specified level.
